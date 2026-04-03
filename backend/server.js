@@ -16,5 +16,5 @@ app.get('/',(req , res )=>{
     res.send('API WORKING');
 });
 app.listen(port,()=>{
-    console.log('Server Started on http://localhost:${port} ')
+    console.log(`Server Started on http://localhost:${port}`)
 })
