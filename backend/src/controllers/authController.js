@@ -10,7 +10,7 @@ const generateToken = (id) => {
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role, course } = req.body;
+    const { name, email, password, role, course, universityCampus, branch, semester, section } = req.body;
 
     if (role === 'admin') {
       return res.status(403).json({ message: 'Public administrator registration is forbidden.' });
@@ -31,7 +31,11 @@ export const registerUser = async (req, res) => {
       email,
       password: hashedPassword,
       role: role || 'candidate',
-      course: course || undefined
+      course: course || undefined,
+      universityCampus,
+      branch,
+      semester,
+      section
     });
 
     if (user) {

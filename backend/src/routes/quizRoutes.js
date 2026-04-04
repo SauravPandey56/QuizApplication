@@ -1,5 +1,5 @@
 import express from 'express';
-import { createQuiz, getQuizzes, getQuizById, togglePublish, updateQuiz } from '../controllers/quizController.js';
+import { createQuiz, getQuizzes, getQuizById, togglePublish, updateQuiz, requestUpdatePermission, handleUpdatePermission } from '../controllers/quizController.js';
 import { protect, authorize } from '../middleware/auth.js';
 import questionRoutes from './questionRoutes.js';
 
@@ -18,5 +18,8 @@ router.route('/:id')
 
 router.route('/:id/publish')
   .put(protect, authorize('examiner', 'admin'), togglePublish);
+
+router.post('/:id/request-update', protect, authorize('examiner'), requestUpdatePermission);
+router.post('/:id/handle-permission', protect, authorize('admin'), handleUpdatePermission);
 
 export default router;

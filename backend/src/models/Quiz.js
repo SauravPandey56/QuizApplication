@@ -50,6 +50,23 @@ const quizSchema = new mongoose.Schema({
   isPublished: {
     type: Boolean,
     default: false
+  },
+  // Targeting fields
+  universityCampus: { type: String, trim: true },
+  branch: { type: String, trim: true },
+  semester: { type: Number, min: 1, max: 8 },
+  section: { type: String, trim: true },
+  
+  // Update permission fields
+  updatePermissionStatus: {
+    type: String,
+    enum: ['none', 'pending', 'granted'],
+    default: 'none'
+  },
+  updatePermissionMessage: { type: String, trim: true },
+  lastUpdatePermittedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 }, { timestamps: true });
 

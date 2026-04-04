@@ -1,5 +1,5 @@
 import express from 'express';
-import { getUsers, deleteUser, toggleBlockUser, getGlobalPerformance, updateProfile } from '../controllers/userController.js';
+import { getUsers, deleteUser, toggleBlockUser, getGlobalPerformance, updateProfile, createUserByAdmin } from '../controllers/userController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -24,5 +24,7 @@ router.route('/:id')
 
 router.route('/:id/toggle-block')
   .put(toggleBlockUser);
+
+router.post('/create', authorize('admin'), createUserByAdmin);
 
 export default router;

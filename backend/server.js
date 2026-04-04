@@ -14,6 +14,8 @@ import courseRoutes from './src/routes/courseRoutes.js';
 import quizRoutes from './src/routes/quizRoutes.js';
 import attemptRoutes from './src/routes/attemptRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
+import settingRoutes from './src/routes/settingRoutes.js';
+import settingRoutes from './src/routes/settingRoutes.js';
 
 const app = express();
 
@@ -33,6 +35,8 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/attempts', attemptRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/settings', settingRoutes);
+app.use('/api/settings', settingRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ message: 'API is running...' });
 });

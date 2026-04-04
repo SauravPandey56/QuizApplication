@@ -34,6 +34,23 @@ const userSchema = new mongoose.Schema({
       return this.role === 'candidate';
     }
   },
+  universityCampus: {
+    type: String,
+    trim: true
+  },
+  branch: {
+    type: String,
+    trim: true
+  },
+  semester: {
+    type: Number,
+    min: 1,
+    max: 8
+  },
+  section: {
+    type: String,
+    trim: true
+  },
   isActive: {
     type: Boolean,
     default: true
