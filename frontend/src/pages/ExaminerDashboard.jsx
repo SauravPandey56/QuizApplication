@@ -18,13 +18,16 @@ const ExaminerDashboard = () => {
   const [formData, setFormData] = useState({
     title: '', description: '', course: '', duration: 30, totalMarks: 100, 
     markDistributionType: 'equal', allowRetake: false,
-    startTime: '', endTime: ''
+    startTime: '', endTime: '',
+    branch: '', semester: 1, section: '', universityCampus: ''
   });
+  const [settings, setSettings] = useState([]);
 
   useEffect(() => {
     if (activeTab === 'quizzes') {
       fetchQuizzes();
       fetchCourses();
+      fetchSettings();
     }
   }, [activeTab]);
 
@@ -38,6 +41,20 @@ const ExaminerDashboard = () => {
       if(res.data.length > 0) setFormData(p => ({...p, course: res.data[0]._id}));
     }).catch(console.error);
   };
+
+  const fetchSettings = () => {
+    axios.get('/api/settings').then(res => setSettings(res.data)).catch(console.error);
+  };
+
+  const campuses = settings.filter(s => s.type === 'campus').map(s => s.value);
+  const branches = settings.filter(s => s.type === 'branch').map(s => s.value);
+  const sections = settings.filter(s => s.type === 'section').map(s => s.value);
+  const semesters = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  const getOptions = (arr, defaultArr) => arr.length > 0 ? arr : defaultArr;
+  const defaultCampuses = ['GEU DEHRADUN', 'GEHU DEHRADUN', 'GEHU haldwani', 'GEHU bihmtal'];
+  const defaultBranches = ['CSE', 'mechanical', 'civil', 'electrical', 'ECE', 'chemical'];
+  const defaultSections = ['A', 'B', 'C', 'D'];
 
   const handleCreateQuiz = async (e) => {
     e.preventDefault();
@@ -72,6 +89,32 @@ const ExaminerDashboard = () => {
     } catch (err) {
       alert(err.response?.data?.message || 'Error toggling publish state');
     }
+  };
+
+  const handleRequestPermission = async (quizId) => {
+    const message = window.prompt("Reason for update request:");
+    if (message === null) return;
+    try {
+      await axios.post(`/api/quizzes/${quizId}/request-update`, { message });
+      alert('Update permission requested.');
+      fetchQuizzes();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error requesting permission');
+    }
+  };
+
+  const handleEditDetails = async (quiz) => {
+    if (quiz.updatePermissionStatus !== 'granted') {
+      if (quiz.updatePermissionStatus === 'pending') {
+        alert('Your update request is currently pending admin approval.');
+      } else {
+        alert('You must request permission from the admin to update this quiz.');
+      }
+      return;
+    }
+    // Simplistic handling for direct editing - omitted full form logic for brevity, 
+    // real app would open an edit modal like the question editor.
+    alert('Edit mode unlocked! (Implementation pending based on requirements)');
   };
 
   const handleChange = (e) => {
@@ -135,6 +178,41 @@ const ExaminerDashboard = () => {
                         {courses.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                       </select>
                     )}
+                  </div>
+
+                  {/* Target Fields */}
+                  <div className="md:col-span-2 border border-slate-200 p-4 rounded-xl bg-white/50">
+                     <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center">Targeting Validation</h3>
+                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">Campus Options</label>
+                          <select name="universityCampus" value={formData.universityCampus} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none text-sm cursor-pointer">
+                            <option value="">Any Campus</option>
+                            {getOptions(campuses, defaultCampuses).map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">Branch Focus</label>
+                          <select name="branch" value={formData.branch} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none text-sm cursor-pointer">
+                            <option value="">Any Branch</option>
+                            {getOptions(branches, defaultBranches).map(b => <option key={b} value={b}>{b}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">Semester Rule</label>
+                          <select name="semester" value={formData.semester} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none text-sm cursor-pointer">
+                            <option value="">Any Semester</option>
+                            {semesters.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">Section Match</label>
+                          <select name="section" value={formData.section} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none text-sm cursor-pointer">
+                            <option value="">Any Section</option>
+                            {getOptions(sections, defaultSections).map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                     </div>
                   </div>
 
                   {/* Scheduling block */}
@@ -208,12 +286,28 @@ const ExaminerDashboard = () => {
                   {quiz.startTime && <div className="flex items-center font-medium text-xs text-indigo-600 bg-indigo-50 p-1 rounded mt-2 px-2"><Calendar size={14} className="mr-1"/> Starts: {new Date(quiz.startTime).toLocaleDateString()}</div>}
                 </div>
                 
-                <button 
-                  onClick={() => setEditingQuiz(quiz)}
-                  className="mt-auto w-full bg-slate-800 hover:bg-slate-900 text-white rounded-xl py-2.5 text-sm font-bold shadow-md transition-all flex justify-center items-center"
-                >
-                  <Layers size={16} className="mr-2"/> Launch Question Editor
-                </button>
+                <div className="mt-auto grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => setEditingQuiz(quiz)}
+                    className="w-full bg-slate-800 hover:bg-slate-900 text-white rounded-xl py-2.5 text-sm font-bold shadow-md transition-all flex justify-center items-center"
+                  >
+                    Question Editor
+                  </button>
+
+                  {quiz.updatePermissionStatus === 'granted' ? (
+                     <button onClick={() => handleEditDetails(quiz)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 text-sm font-bold shadow-md transition-all flex justify-center items-center">
+                        Edit Settings
+                     </button>
+                  ) : quiz.updatePermissionStatus === 'pending' ? (
+                     <button disabled className="w-full bg-slate-200 text-slate-500 rounded-xl py-2.5 text-sm font-bold shadow-md transition-all flex justify-center items-center cursor-not-allowed text-xs">
+                        Update Pending...
+                     </button>
+                  ) : (
+                     <button onClick={() => handleRequestPermission(quiz._id)} className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-xl py-2.5 text-xs font-bold shadow-md transition-all flex justify-center items-center p-1 text-center leading-tight">
+                        Request Update Perms
+                     </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

@@ -1,18 +1,26 @@
-import React, { useContext } from 'react';
-import { Outlet, Navigate, Link, useNavigate } from 'react-router-dom';
+import React, { useContext, useState } from 'react';
+import { Outlet, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { LogOut, LayoutDashboard, FileText, CheckSquare, Users } from 'lucide-react';
+import { LogOut } from 'lucide-react';
+import Chatbot from '../Chatbot';
+import Footer from './Footer';
+import axios from 'axios';
 
 const Layout = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
 
   if (!user) return <Navigate to="/login" />;
+  
+  const isAttemptScreen = location.pathname.includes('/attempt/');
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -45,9 +53,8 @@ const Layout = () => {
         <Outlet />
       </main>
 
-      <footer className="py-6 text-center text-slate-500 text-sm">
-        &copy; {new Date().getFullYear()} QuizSphere Application.
-      </footer>
+      {!isAttemptScreen && user.role !== 'admin' && <Footer />}
+      {!isAttemptScreen && user.role !== 'admin' && <Chatbot />}
     </div>
   );
 };
