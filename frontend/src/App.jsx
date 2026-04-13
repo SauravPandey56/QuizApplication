@@ -7,6 +7,7 @@ import AdminLogin from './pages/AdminLogin';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import CandidateAttempt from './pages/CandidateAttempt';
+import AttemptResult from './pages/AttemptResult';
 
 function App() {
   const { user, loading } = useContext(AuthContext);
@@ -30,6 +31,7 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/attempt/:attemptId" element={<CandidateAttempt />} />
+          <Route path="/attempt/:attemptId/result" element={<AttemptResult />} />
         </Route>
       </Routes>
     </BrowserRouter>

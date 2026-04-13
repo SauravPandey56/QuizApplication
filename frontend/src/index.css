@@ -16,5 +16,33 @@
 }
 
 body {
-  @apply bg-gradient-to-br from-indigo-50 via-white to-cyan-50 min-h-screen text-slate-800;
+  font-family: 'Inter', sans-serif;
+  @apply bg-gradient-to-br from-[#F8FAFC] via-white to-indigo-50 min-h-screen text-slate-800;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-slide-right {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.animate-slide-left {
+  animation: slideInLeft 0.3s ease-out forwards;
 }

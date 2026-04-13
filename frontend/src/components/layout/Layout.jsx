@@ -4,6 +4,8 @@ import { AuthContext } from '../../context/AuthContext';
 import { LogOut } from 'lucide-react';
 import Chatbot from '../Chatbot';
 import Footer from './Footer';
+import QuizSphereLogo from '../logo/QuizSphereLogo';
+import AnimatedBackground from './AnimatedBackground';
 import axios from 'axios';
 
 const Layout = () => {
@@ -20,18 +22,24 @@ const Layout = () => {
     navigate('/login');
   };
 
-
+  if (user.role === 'admin' || user.role === 'examiner' || user.role === 'candidate') {
+    return (
+      <div className="min-h-screen bg-transparent font-sans text-slate-800 flex overflow-hidden relative">
+        <AnimatedBackground />
+        <Outlet />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative z-0">
+      <AnimatedBackground />
       <nav className="glass sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-                QuizSphere
-              </span>
-            </div>
+            <Link to="/" className="flex items-center">
+              <QuizSphereLogo size="sm" />
+            </Link>
             
             <div className="flex items-center space-x-4">
               <span className="text-slate-600 font-medium hidden sm:block">
@@ -53,8 +61,8 @@ const Layout = () => {
         <Outlet />
       </main>
 
-      {!isAttemptScreen && user.role !== 'admin' && <Footer />}
-      {!isAttemptScreen && user.role !== 'admin' && <Chatbot />}
+      {!isAttemptScreen && <Footer />}
+      {!isAttemptScreen && <Chatbot />}
     </div>
   );
 };
