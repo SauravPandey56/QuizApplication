@@ -146,7 +146,7 @@ const Footer = ({ className = '' }) => {
          </div>
 
          <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center text-xs font-bold text-slate-600 uppercase tracking-widest">
-            <p>&copy; {new Date().getFullYear()} QuizSphere Core. Executing protocols.</p>
+            <p>&copy; {new Date().getFullYear()} Saurav Pandey. QuizSphere.</p>
             <p className="mt-4 md:mt-0 flex items-center text-indigo-400">
               <span className="w-2 h-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></span>
               All nodes online
