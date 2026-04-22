@@ -11,6 +11,10 @@ const feedbackSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  subject: {
+    type: String,
+    trim: true
+  },
   message: {
     type: String,
     required: true,

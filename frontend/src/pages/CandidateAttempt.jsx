@@ -28,6 +28,11 @@ const CandidateAttempt = () => {
   // Refs
   const responsesRef = useRef({});
   const handlingViolationRef = useRef(false);
+  const quizRef = useRef(null);
+
+  useEffect(() => {
+    if(quiz) quizRef.current = quiz;
+  }, [quiz]);
 
   useEffect(() => {
     const fetchAttemptData = async () => {
@@ -64,6 +69,38 @@ const CandidateAttempt = () => {
     
     fetchAttemptData();
   }, [attemptId, navigate]);
+
+  useEffect(() => {
+    if (!isStarted || loading || !quiz) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const { data } = await axios.get(`/api/quizzes/${quiz._id}`);
+        
+        if (data.status === 'COMPLETED' || data.status === 'ARCHIVED') {
+          alert('ADMIN COMMAND: EXAM HAS BEEN FORCEFULLY TERMINATED.');
+          handleSubmit(true);
+        }
+
+        if (data.broadcastMessage && data.broadcastMessage !== quizRef.current?.broadcastMessage) {
+          alert(`ADMIN BROADCAST MESSAGE:\n${data.broadcastMessage}`);
+        }
+
+        if (data.duration > (quizRef.current?.duration || quiz.duration)) {
+          const addedMins = data.duration - (quizRef.current?.duration || quiz.duration);
+          setTimeLeft(prev => prev + (addedMins * 60));
+          alert(`ADMIN NOTIFICATION: Your exam time has been extended by ${addedMins} minutes.`);
+        }
+
+        quizRef.current = data;
+        setQuiz(data);
+      } catch (e) {
+        console.warn('Polling check failed', e);
+      }
+    }, 30000);
+
+    return () => clearInterval(pollInterval);
+  }, [isStarted, loading, quiz?._id]);
 
   useEffect(() => {
     if (!isStarted || loading || timeLeft <= 0) return;
@@ -121,13 +158,19 @@ const CandidateAttempt = () => {
     };
 
     const handleContextMenu = (e) => e.preventDefault();
+    const handleCopyPaste = (e) => e.preventDefault();
+    
     const handleKeyDown = (e) => {
       if (
         e.key === 'F5' || 
         (e.ctrlKey && e.key.toLowerCase() === 'r') || 
         (e.metaKey && e.key.toLowerCase() === 'r') || 
         e.key === 'F12' ||
-        (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i')
+        (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i') ||
+        (e.ctrlKey && e.key.toLowerCase() === 'c') ||
+        (e.ctrlKey && e.key.toLowerCase() === 'v') ||
+        (e.metaKey && e.key.toLowerCase() === 'c') ||
+        (e.metaKey && e.key.toLowerCase() === 'v')
       ) {
         e.preventDefault();
       }
@@ -141,6 +184,9 @@ const CandidateAttempt = () => {
     window.addEventListener('blur', handleBlur);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('copy', handleCopyPaste);
+    document.addEventListener('cut', handleCopyPaste);
+    document.addEventListener('paste', handleCopyPaste);
     document.addEventListener('keydown', handleKeyDown);
     window.addEventListener('beforeunload', handleBeforeUnload);
 
@@ -150,6 +196,9 @@ const CandidateAttempt = () => {
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('copy', handleCopyPaste);
+      document.removeEventListener('cut', handleCopyPaste);
+      document.removeEventListener('paste', handleCopyPaste);
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
@@ -249,6 +298,14 @@ const CandidateAttempt = () => {
   const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   return (
+    <>
+    {quiz?.isPaused && (
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-md text-white px-4 text-center">
+        <AlertCircle size={64} className="text-amber-500 mb-6 animate-pulse"/>
+        <h1 className="text-4xl font-black mb-4 tracking-tight text-white">EXAM TEMPORARILY PAUSED</h1>
+        <p className="text-lg max-w-2xl text-slate-300">An administrator has paused the testing environment. Your timer will automatically adjust if necessary. Do not close this window or exit fullscreen.</p>
+      </div>
+    )}
     <div className="min-h-screen bg-slate-50 flex flex-col pt-16 relative overflow-hidden">
       {/* Background aesthetics */}
       <div className="fixed top-0 right-0 w-1/3 h-1/2 bg-[#4F46E5]/10 rounded-full blur-[150px] pointer-events-none"></div>
@@ -415,6 +472,7 @@ const CandidateAttempt = () => {
 
       </div>
     </div>
+    </>
   );
 };
 

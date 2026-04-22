@@ -18,6 +18,8 @@ const CandidateDashboard = () => {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [preparingEnvironments, setPreparingEnvironments] = useState({});
   
   // Data State
   const [quizzes, setQuizzes] = useState([]);
@@ -40,6 +42,21 @@ const CandidateDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+  }, [activeTab]);
+
+  useEffect(() => {
+    const timeInterval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timeInterval);
+  }, []);
+
+  useEffect(() => {
+    let pollInterval;
+    if (activeTab === 'dashboard' || activeTab === 'quizzes') {
+      pollInterval = setInterval(() => {
+        axios.get('/api/quizzes').then(res => setQuizzes(res.data.quizzes || [])).catch(() => {});
+      }, 5000);
+    }
+    return () => clearInterval(pollInterval);
   }, [activeTab]);
 
   const fetchDashboardData = async () => {
@@ -65,6 +82,15 @@ const CandidateDashboard = () => {
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to initialize testing environment');
     }
+  };
+
+  const handlePrepareEnvironment = (quizId) => {
+    setPreparingEnvironments((prev) => ({ ...prev, [quizId]: 'preparing' }));
+    
+    // Simulate robust environment checks (browser, internet, webcam, fullscreen API checks logically delayed)
+    setTimeout(() => {
+      setPreparingEnvironments((prev) => ({ ...prev, [quizId]: 'ready' }));
+    }, 4000);
   };
 
   const handleLogout = () => {
@@ -102,6 +128,8 @@ const CandidateDashboard = () => {
     { id: 'contact', icon: Link2, label: 'Get in Touch' },
     { id: 'profile', icon: User, label: 'Academic Profile' },
   ];
+
+  const liveUnattemptedQuizzes = quizzes.filter(q => q.state === 'LIVE' && !completedAttempts.some(a => a.quiz?._id === q._id));
 
   return (
     <div className="flex w-full h-screen overflow-hidden">
@@ -276,14 +304,37 @@ const CandidateDashboard = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {quizzes.map(quiz => {
-                    const isUpcoming = quiz.startTime && new Date(quiz.startTime) > new Date();
+                    const isUpcoming = quiz.state === 'SCHEDULED' || quiz.state === 'APPROVED';
+                    const isEnvReady = quiz.state === 'UPCOMING';
+                    const isLive = quiz.state === 'LIVE';
+                    const isCompleted = quiz.state === 'COMPLETED' || completedAttempts.some(a => a.quiz?._id === quiz._id);
+                    
+                    const startTime = quiz.startTime ? new Date(quiz.startTime) : null;
+                    const diffSeconds = startTime ? Math.floor((startTime - currentTime) / 1000) : 0;
+                    
+                    const formatCountdown = (secs) => {
+                      if(secs <= 0) return '00:00:00';
+                      const h = Math.floor(secs / 3600).toString().padStart(2, '0');
+                      const m = Math.floor((secs % 3600) / 60).toString().padStart(2, '0');
+                      const s = (secs % 60).toString().padStart(2, '0');
+                      return `${h}:${m}:${s}`;
+                    };
+
+                    const isPrepared = preparingEnvironments[quiz._id] === 'ready';
+                    const isPreparing = preparingEnvironments[quiz._id] === 'preparing';
+
                     return (
                       <div key={quiz._id} className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-2xl hover:-translate-y-2 transition-all flex flex-col group relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/10 to-transparent rounded-bl-full pointer-events-none"></div>
                         
                         <div className="flex justify-between items-start mb-4">
-                           <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-widest rounded-md border backdrop-blur-sm shadow-sm ${isUpcoming ? 'bg-blue-50/80 text-blue-600 border-blue-200' : 'bg-emerald-50/80 text-emerald-600 border-emerald-200'}`}>
-                             {isUpcoming ? 'Upcoming' : 'Open'}
+                           <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-widest rounded-md border backdrop-blur-sm shadow-sm ${
+                             isCompleted ? 'bg-slate-100 text-slate-500 border-slate-200' :
+                             isLive ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' :
+                             isEnvReady ? 'bg-amber-50 text-amber-600 border-amber-200' :
+                             'bg-blue-50/80 text-blue-600 border-blue-200'
+                           }`}>
+                             {isCompleted ? 'Completed' : isLive ? 'Live' : isEnvReady ? 'Prepare Environment' : 'Upcoming'}
                            </span>
                            <span className="text-xs font-bold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded bg-white/50">Target: {quiz.totalMarks}</span>
                         </div>
@@ -291,28 +342,54 @@ const CandidateDashboard = () => {
                         <h3 className="text-xl font-bold text-slate-800 group-hover:text-indigo-600 transition-colors leading-tight mb-2 line-clamp-2">{quiz.title}</h3>
                         <p className="text-sm font-medium text-slate-500 line-clamp-2 mb-6 flex-1">{quiz.description || "No specific instructions explicitly provided by the Examiner."}</p>
 
-                        <div className="space-y-2 mb-6">
-                           <div className="flex items-center text-xs font-semibold text-slate-600 bg-slate-50/50 p-2 rounded-lg border border-slate-100">
-                             <Clock size={14} className="text-indigo-400 mr-2 shrink-0"/> {quiz.duration} Minutes Duration
+                        <div className="space-y-3 mb-6">
+                           <div className="flex items-center text-xs font-semibold text-slate-600 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
+                             <Clock size={16} className="text-indigo-400 mr-2 shrink-0"/> {quiz.duration} Minutes Duration
                            </div>
-                           {quiz.startTime && (
-                             <div className="flex items-center text-xs font-semibold text-slate-600 bg-slate-50/50 p-2 rounded-lg border border-slate-100">
-                               <Bell size={14} className="text-amber-500 mr-2 shrink-0"/> Opens: {new Date(quiz.startTime).toLocaleString()}
+                           {(isUpcoming || isEnvReady) && (
+                             <div className="flex items-center text-sm font-black text-slate-700 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
+                               <Timer size={18} className="text-indigo-500 mr-2 shrink-0 animate-pulse"/> Exam starts in: {formatCountdown(diffSeconds)}
+                             </div>
+                           )}
+                           {isLive && !isCompleted && (
+                             <div className="flex items-center text-sm font-black text-red-600 bg-red-50/50 p-3 rounded-lg border border-red-100">
+                               <AlertCircle size={18} className="mr-2 shrink-0 animate-pulse"/> EXAM IS LIVE NOW
                              </div>
                            )}
                         </div>
 
-                        <button 
-                          onClick={() => handleStartQuiz(quiz._id)}
-                          disabled={isUpcoming}
-                          className={`w-full py-3 rounded-xl font-bold flex items-center justify-center transition-all shadow-md ${
-                            isUpcoming 
-                              ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' 
-                              : 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:shadow-indigo-500/30 active:scale-[0.98]'
-                          }`}
-                        >
-                          {isUpcoming ? 'Locked' : 'Initialize Assessment'} <Play size={16} className="ml-2"/>
-                        </button>
+                        {isCompleted ? (
+                          <button disabled className="w-full py-3 rounded-xl font-bold flex items-center justify-center bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed">
+                            Quiz Completed
+                          </button>
+                        ) : isUpcoming ? (
+                          <button disabled className="w-full py-3 rounded-xl font-bold flex items-center justify-center bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 shadow-sm">
+                            Locked <Play size={16} className="ml-2 opacity-50"/>
+                          </button>
+                        ) : isEnvReady ? (
+                          <button 
+                            onClick={() => handlePrepareEnvironment(quiz._id)}
+                            disabled={isPrepared || isPreparing}
+                            className={`w-full py-3 rounded-xl font-bold flex items-center justify-center transition-all shadow-md ${
+                              isPrepared ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                              isPreparing ? 'bg-amber-100 text-amber-700 border border-amber-200 cursor-wait' :
+                              'bg-amber-500 hover:bg-amber-600 text-white'
+                            }`}
+                          >
+                            {isPrepared ? 'Environment Ready' : isPreparing ? 'Preparing Environment...' : 'Prepare Environment'}
+                          </button>
+                        ) : isLive ? (
+                          <button 
+                            onClick={() => handleStartQuiz(quiz._id)}
+                            className="w-full py-3 rounded-xl font-bold flex items-center justify-center transition-all shadow-md bg-gradient-to-r from-red-600 to-red-500 text-white hover:shadow-red-500/30 active:scale-[0.98]"
+                          >
+                            Enter Live Exam <Play size={16} className="ml-2"/>
+                          </button>
+                        ) : (
+                           <button disabled className="w-full py-3 rounded-xl font-bold flex items-center justify-center bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200">
+                             Unavailable
+                           </button>
+                        )}
                       </div>
                     );
                   })}
@@ -625,6 +702,29 @@ const CandidateDashboard = () => {
 
         </main>
       </div>
+
+      {/* Global Exam Start Trigger Modal */}
+      {liveUnattemptedQuizzes.length > 0 && (
+        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-4">
+          {liveUnattemptedQuizzes.map(liveQuiz => (
+            <div key={liveQuiz._id} className="bg-white p-8 md:p-10 rounded-3xl shadow-2xl max-w-md w-full text-center border-[6px] border-red-500 animate-in zoom-in fade-in duration-300 mb-6">
+              <div className="w-24 h-24 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner ring-8 ring-red-50">
+                <AlertCircle size={48} className="animate-pulse"/>
+              </div>
+              <h2 className="text-3xl font-black text-slate-800 mb-3 tracking-tight">Exam Starting</h2>
+              <p className="text-slate-600 font-medium mb-8 text-lg">Your exam <b>"{liveQuiz.title}"</b> is starting now. Ensure your environment is fully prepared.</p>
+              
+              <button 
+                onClick={() => handleStartQuiz(liveQuiz._id)}
+                className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-black py-5 px-8 rounded-2xl shadow-xl shadow-red-500/30 transition-transform hover:-translate-y-1 active:scale-95 text-xl flex items-center justify-center uppercase tracking-widest"
+              >
+                Start Exam <Play size={24} className="ml-3 fill-current"/>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
     </div>
   );
 };

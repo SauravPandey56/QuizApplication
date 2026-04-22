@@ -2,12 +2,12 @@ import Feedback from '../models/Feedback.js';
 
 export const submitFeedback = async (req, res) => {
   try {
-    const { name, email, message } = req.body;
+    const { name, email, subject, message } = req.body;
     if (!name || !email || !message) {
       return res.status(400).json({ message: 'All fields are required.' });
     }
-    const feedback = await Feedback.create({ name, email, message });
-    res.status(201).json({ message: 'Feedback submitted successfully!', feedback });
+    const feedback = await Feedback.create({ name, email, subject, message });
+    res.status(201).json({ message: 'Thank you! Your feedback has been sent to the admin.', feedback });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

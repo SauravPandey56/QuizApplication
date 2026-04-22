@@ -20,16 +20,6 @@ const quizSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  duration: {
-    type: Number, // in minutes
-    required: true
-  },
-  startTime: {
-    type: Date
-  },
-  endTime: {
-    type: Date
-  },
   totalMarks: {
     type: Number,
     required: true
@@ -39,23 +29,15 @@ const quizSchema = new mongoose.Schema({
     enum: ['equal', 'individual'],
     default: 'equal' // If equal, totalMarks / number of questions
   },
-  allowRetake: {
-    type: Boolean,
-    default: false
-  },
   isActive: {
     type: Boolean,
     default: true
   },
-  isPublished: {
-    type: Boolean,
-    default: false
+  status: {
+    type: String,
+    enum: ['DRAFT', 'REVIEW', 'APPROVED'],
+    default: 'DRAFT'
   },
-  // Targeting fields
-  universityCampus: { type: String, trim: true },
-  branch: { type: String, trim: true },
-  semester: { type: Number, min: 1, max: 8 },
-  section: { type: String, trim: true },
   
   // Update permission fields
   updatePermissionStatus: {

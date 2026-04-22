@@ -31,6 +31,13 @@ const AdminDashboard = () => {
   const [newSetting, setNewSetting] = useState({ type: 'campus', value: '' });
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'candidate' });
   const [editingQuiz, setEditingQuiz] = useState(null);
+  const [postponeQuiz, setPostponeQuiz] = useState(null);
+  const [newStartTime, setNewStartTime] = useState('');
+  const [newEndTime, setNewEndTime] = useState('');
+  const [broadcastQuizId, setBroadcastQuizId] = useState(null);
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [extendQuizId, setExtendQuizId] = useState(null);
+  const [extendMinutes, setExtendMinutes] = useState(15);
 
   useEffect(() => {
     fetchData();
@@ -111,6 +118,44 @@ const AdminDashboard = () => {
   const deleteFeedback = async (id) => {
     try { await axios.delete(`/api/feedbacks/${id}`); fetchData(); } catch { alert('Error'); }
   };
+
+  const handleApproveQuiz = async (id) => {
+    try {
+      await axios.put(`/api/quizzes/${id}/approve`);
+      fetchData();
+    } catch { alert('Error approving quiz'); }
+  };
+
+  const handlePostponeQuiz = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`/api/quizzes/${postponeQuiz._id}/schedule`, { startTime: newStartTime, endTime: newEndTime });
+      setPostponeQuiz(null);
+      fetchData();
+    } catch { alert('Error scheduling quiz'); }
+  };
+
+  const executeControl = async (id, action, payload = {}) => {
+    try {
+      await axios.put(`/api/quizzes/${id}/${action}`, payload);
+      fetchData();
+      setBroadcastQuizId(null);
+      setExtendQuizId(null);
+      setBroadcastMessage('');
+      alert(`Emergency Action: ${action} executed.`);
+    } catch (e) {
+      alert(`Failed to execute ${action}`);
+    }
+  };
+
+  const handleDeleteQuiz = async (id) => {
+    if(!window.confirm("Are you sure you want to delete this quiz?")) return;
+    try { 
+      await axios.delete(`/api/quizzes/${id}`); 
+      fetchData(); 
+    } catch { alert('Error deleting quiz'); }
+  };
+
 
   // Generate mock chart data since API format might differ
   const getLineData = () => {
@@ -432,8 +477,8 @@ const AdminDashboard = () => {
                               </div>
                            </td>
                            <td className="p-4 pr-6 flex flex-col items-end">
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 border ${q.isPublished ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                 {q.isPublished ? 'Live' : 'Draft'}
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 border ${q.status === 'approved' || q.isPublished ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : q.status === 'pending_approval' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                 {q.status ? q.status.replace('_', ' ') : (q.isPublished ? 'approved' : 'draft')}
                               </span>
                               
                               {q.updatePermissionStatus === 'pending' && (
@@ -447,9 +492,34 @@ const AdminDashboard = () => {
                                 </div>
                               )}
 
-                              <button onClick={() => setEditingQuiz(q)} className="text-[11px] flex items-center justify-center font-bold bg-slate-100 hover:bg-indigo-50 border hover:border-indigo-200 text-slate-600 hover:text-indigo-700 px-3 py-1.5 rounded transition-all">
-                                <Layers size={12} className="mr-1"/> Inspect Questions
-                              </button>
+                              <div className="flex flex-wrap justify-end gap-2 mt-2 w-full max-w-[250px]">
+                                {q.status === 'REVIEW' && (
+                                  <button onClick={() => handleApproveQuiz(q._id)} className="text-[11px] flex items-center justify-center font-bold bg-emerald-50 hover:bg-emerald-100 border hover:border-emerald-200 text-emerald-600 hover:text-emerald-700 px-3 py-1.5 rounded transition-all">
+                                    <CheckCircle size={12} className="mr-1"/> Approve
+                                  </button>
+                                )}
+                                {['APPROVED', 'SCHEDULED'].includes(q.status) && (
+                                  <button onClick={() => { setPostponeQuiz(q); setNewStartTime(q.startTime ? new Date(q.startTime).toISOString().slice(0, 16) : ''); setNewEndTime(q.endTime ? new Date(q.endTime).toISOString().slice(0, 16) : ''); }} className="text-[11px] flex items-center justify-center font-bold bg-amber-50 hover:bg-amber-100 border hover:border-amber-200 text-amber-600 hover:text-amber-700 px-3 py-1.5 rounded transition-all">
+                                    {q.status === 'APPROVED' ? 'Schedule' : 'Postpone'}
+                                  </button>
+                                )}
+                                <button onClick={() => setEditingQuiz(q)} className="text-[11px] flex items-center justify-center font-bold bg-slate-100 hover:bg-indigo-50 border hover:border-indigo-200 text-slate-600 hover:text-indigo-700 px-3 py-1.5 rounded transition-all">
+                                  <Layers size={12} className="mr-1"/> Inspect
+                                </button>
+                                <button onClick={() => handleDeleteQuiz(q._id)} className="text-[11px] flex items-center justify-center font-bold bg-red-50 hover:bg-red-100 border hover:border-red-200 text-red-600 hover:text-red-700 px-3 py-1.5 rounded transition-all">
+                                  <Trash2 size={12} className="mr-1"/> Delete
+                                </button>
+                              </div>
+                              {['UPCOMING', 'LIVE'].includes(q.state) && (
+                                <div className="flex flex-wrap gap-2 mt-2 bg-slate-50 p-2 rounded-lg border border-slate-200 justify-end w-full max-w-[250px]">
+                                  <button onClick={() => executeControl(q._id, 'pause')} className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded border border-amber-200">
+                                    {q.isPaused ? "Resume" : "Pause"}
+                                  </button>
+                                  <button onClick={() => setExtendQuizId(q._id)} className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded border border-blue-200">Extend</button>
+                                  <button onClick={() => setBroadcastQuizId(q._id)} className="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-1 rounded border border-purple-200">Broadcast</button>
+                                  <button onClick={() => { if(window.confirm('Force submit?')) executeControl(q._id, 'force-submit') }} className="text-[10px] font-bold bg-red-100 text-red-700 px-2 py-1 rounded border border-red-200">Force Stop</button>
+                                </div>
+                              )}
                            </td>
                          </tr>
                        ))}
@@ -585,37 +655,60 @@ const AdminDashboard = () => {
 
           {/* FEEDBACK TAB */}
           {activeTab === 'feedback' && (
-            <div className="animate-fade-in max-w-4xl mx-auto">
+            <div className="animate-fade-in max-w-6xl mx-auto">
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 pb-2 mb-6">
                  <h2 className="text-xl font-bold text-slate-800">Support & Feedback Inbox</h2>
                  <p className="text-sm text-slate-500 mt-1">Review bug reports and student requests securely submitted via the platform.</p>
               </div>
-              <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2 custom-scrollbar">
-                 {feedbacks.length === 0 && (
-                   <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl border-dashed">
-                     <p className="text-slate-400 font-medium">Inbox is empty. No new tickets!</p>
-                   </div>
-                 )}
-                 {feedbacks.map(f => (
-                   <div key={f._id} className={`p-5 rounded-2xl border transition-all ${f.isRead ? 'bg-slate-50 border-slate-200' : 'bg-white border-amber-200 shadow-sm border-l-4 border-l-amber-400'}`}>
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center space-x-3">
-                           <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 text-xs">{getAvatarInitials(f.name)}</div>
-                           <div>
-                             <h4 className="font-bold text-slate-800">{f.name} <span className="text-xs font-normal text-slate-500 ml-1">{f.email}</span></h4>
-                             <p className="text-xs text-slate-500">{new Date(f.createdAt).toLocaleString([], {weekday:'long', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</p>
-                           </div>
-                        </div>
-                        <div className="flex gap-2">
-                          {!f.isRead && <button onClick={() => markFeedbackRead(f._id)} className="text-xs bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-100 transition-colors flex items-center"><CheckCircle size={14} className="mr-1"/> Mark Read</button>}
-                          <button onClick={() => deleteFeedback(f._id)} className="text-slate-400 border border-slate-200 hover:border-red-200 bg-white hover:bg-red-50 hover:text-red-500 p-1.5 rounded-lg transition-colors"><Trash2 size={16}/></button>
-                        </div>
-                      </div>
-                      <div className="mt-4 bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed shadow-inner">
-                        {f.message}
-                      </div>
-                   </div>
-                 ))}
+              
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
+                        <th className="p-4">Name</th>
+                        <th className="p-4">Email</th>
+                        <th className="p-4">Subject</th>
+                        <th className="p-4 w-1/3">Message</th>
+                        <th className="p-4">Date</th>
+                        <th className="p-4 text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm">
+                      {feedbacks.length === 0 && (
+                        <tr>
+                          <td colSpan="6" className="p-8 text-center text-slate-400 font-medium">Inbox is empty. No new tickets!</td>
+                        </tr>
+                      )}
+                      {feedbacks.map(f => (
+                        <tr key={f._id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${!f.isRead ? 'bg-amber-50/50' : ''}`}>
+                          <td className="p-4 font-bold text-slate-800 whitespace-nowrap">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 text-xs shrink-0">{getAvatarInitials(f.name)}</div>
+                              <span>{f.name}</span>
+                            </div>
+                          </td>
+                          <td className="p-4 text-slate-600 truncate max-w-[150px]">{f.email}</td>
+                          <td className="p-4 font-medium text-slate-700 truncate max-w-[150px]">{f.subject || 'No Subject'}</td>
+                          <td className="p-4 text-slate-600 truncate max-w-[300px]" title={f.message}>{f.message}</td>
+                          <td className="p-4 text-slate-500 whitespace-nowrap text-xs">{new Date(f.createdAt).toLocaleDateString()} {new Date(f.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                          <td className="p-4">
+                            <div className="flex justify-center items-center space-x-2">
+                              {!f.isRead && (
+                                <button onClick={() => markFeedbackRead(f._id)} className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors" title="Mark as Read">
+                                  <CheckCircle size={16} />
+                                </button>
+                              )}
+                              <button onClick={() => deleteFeedback(f._id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Delete Feedback">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -627,6 +720,65 @@ const AdminDashboard = () => {
         <QuestionEditorModal quiz={editingQuiz} onClose={() => setEditingQuiz(null)} />
       )}
 
+      {postponeQuiz && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+           <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md animate-fade-in">
+              <h3 className="text-xl font-bold text-slate-800 mb-4">Postpone Quiz</h3>
+              <form onSubmit={handlePostponeQuiz} className="space-y-4">
+                 <div>
+                   <label className="block text-sm font-medium text-slate-700 mb-1">New Start Time</label>
+                   <input required type="datetime-local" value={newStartTime} onChange={e => setNewStartTime(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 outline-none" />
+                 </div>
+                 <div>
+                   <label className="block text-sm font-medium text-slate-700 mb-1">New End Time</label>
+                   <input type="datetime-local" value={newEndTime} onChange={e => setNewEndTime(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 outline-none" />
+                 </div>
+                 <div className="flex justify-end space-x-3 mt-6">
+                   <button type="button" onClick={() => setPostponeQuiz(null)} className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 transition-colors">Cancel</button>
+                   <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors">Save Schedule</button>
+                 </div>
+              </form>
+           </div>
+        </div>
+      )}
+
+
+      {/* Admin Emergency Modals */}
+      {extendQuizId && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+           <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-sm animate-fade-in">
+              <h3 className="text-xl font-bold text-slate-800 mb-4">Extend Time</h3>
+              <div className="space-y-4">
+                 <div>
+                   <label className="block text-sm font-medium text-slate-700 mb-1">Minutes to ADD</label>
+                   <input required type="number" min="1" value={extendMinutes} onChange={e => setExtendMinutes(Number(e.target.value))} className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 outline-none" />
+                 </div>
+                 <div className="flex justify-end space-x-3 mt-6">
+                   <button type="button" onClick={() => setExtendQuizId(null)} className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 transition-colors">Cancel</button>
+                   <button onClick={() => executeControl(extendQuizId, 'extend', { extensionMinutes: extendMinutes })} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg transition-colors">Apply</button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {broadcastQuizId && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+           <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-sm animate-fade-in">
+              <h3 className="text-xl font-bold text-slate-800 mb-4">Send Broadcast</h3>
+              <div className="space-y-4">
+                 <div>
+                   <label className="block text-sm font-medium text-slate-700 mb-1">Message</label>
+                   <textarea required value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} rows="3" className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 outline-none resize-none" />
+                 </div>
+                 <div className="flex justify-end space-x-3 mt-6">
+                   <button type="button" onClick={() => setBroadcastQuizId(null)} className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 transition-colors">Cancel</button>
+                   <button onClick={() => executeControl(broadcastQuizId, 'broadcast', { message: broadcastMessage })} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-lg transition-colors">Send</button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

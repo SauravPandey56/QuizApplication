@@ -86,12 +86,14 @@ const ExaminerDashboard = () => {
     navigate('/login');
   };
 
-  const togglePublish = async (quizId) => {
+  const submitForReview = async (quizId) => {
+    if(!window.confirm("Submit this quiz for admin approval?")) return;
     try {
-      await axios.put(`/api/quizzes/${quizId}/publish`);
+      await axios.put(`/api/quizzes/${quizId}/submit-review`);
       fetchQuizzes();
+      alert('Quiz submitted for review.');
     } catch (err) {
-      alert(err.response?.data?.message || 'Error toggling publish state');
+      alert(err.response?.data?.message || 'Error submitting for review');
     }
   };
 
@@ -330,8 +332,16 @@ const ExaminerDashboard = () => {
                          <h3 className="text-lg font-bold text-slate-800 line-clamp-1" title={quiz.title}>{quiz.title}</h3>
                          <div className="text-xs font-semibold text-indigo-600 flex items-center mt-0.5"><BookOpen size={12} className="mr-1"/> {quiz.course?.name || 'Unknown Course'}</div>
                        </div>
-                       <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-full border shadow-sm ${quiz.isPublished ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
-                         {quiz.isPublished ? 'Active' : 'Draft'}
+                       <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-full border shadow-sm ${
+                         quiz.state === 'LIVE' ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' :
+                         quiz.state === 'COMPLETED' ? 'bg-slate-100 text-slate-500 border-slate-200' :
+                         quiz.state === 'UPCOMING' ? 'bg-cyan-50 text-cyan-600 border-cyan-200' :
+                         quiz.state === 'SCHEDULED' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                         quiz.state === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                         quiz.state === 'REVIEW' ? 'bg-amber-50 text-amber-600 border-amber-200' :
+                         'bg-orange-50 text-orange-600 border-orange-200'
+                       }`}>
+                         {quiz.state || (quiz.status)}
                        </span>
                     </div>
                     
@@ -372,10 +382,11 @@ const ExaminerDashboard = () => {
                             <Shield size={14} className="mr-1.5"/> Request
                           </button>
                        )}
-                       
-                       <button onClick={() => togglePublish(quiz._id)} className="w-10 flex items-center justify-center bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg shadow-sm transition-colors" title={quiz.isPublished ? 'Unpublish' : 'Publish'}>
-                         {quiz.isPublished ? <CheckCircle size={16} className="text-emerald-500"/> : <CheckCircle size={16} className="text-slate-300 hover:text-emerald-500"/>}
-                       </button>
+                       {quiz.status === 'DRAFT' && (
+                         <button onClick={() => submitForReview(quiz._id)} className="w-[80px] flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded-lg shadow-sm transition-colors text-[11px] font-bold" title="Submit for Review">
+                           Submit
+                         </button>
+                       )}
                     </div>
                   </div>
                 ))}
