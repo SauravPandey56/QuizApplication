@@ -11,6 +11,9 @@ import {
 import QuestionEditorModal from '../components/quiz/QuestionEditorModal';
 import QuizSphereLogo from '../components/logo/QuizSphereLogo';
 import { AuthContext } from '../context/AuthContext';
+import DashboardLayout from '../components/layout/DashboardLayout';
+import Sidebar from '../components/layout/Sidebar';
+import Navbar from '../components/layout/Navbar';
 import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
@@ -18,7 +21,6 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   const [courses, setCourses] = useState([]);
   const [users, setUsers] = useState([]);
@@ -194,72 +196,30 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="flex w-full h-screen overflow-hidden bg-[#F8FAFC]">
-      
-      {/* Sidebar Navigation */}
-      <aside className={`bg-slate-900 text-slate-300 w-64 h-full flex flex-col transition-all duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full fixed z-20'}`}>
-        <div className="h-16 flex border-b border-slate-800 items-center justify-between px-6 shrink-0 bg-slate-900">
-           <QuizSphereLogo size="sm" showText={true} />
-        </div>
-        <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
-          <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 mt-2">Admin Controls</p>
-          {menuItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                activeTab === item.id 
-                  ? 'bg-indigo-600 focus:bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 font-medium' 
-                  : 'hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <item.icon size={20} className={activeTab === item.id ? 'text-indigo-200' : 'text-slate-400'} />
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </div>
-        <div className="p-4 border-t border-slate-800 shrink-0">
-          <button onClick={handleLogout} className="flex items-center space-x-3 text-slate-400 hover:text-white transition-colors w-full px-3 py-2">
-            <LogOut size={20} /><span>Log out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content Viewport */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        
-        {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10">
-          <div className="flex items-center">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="mr-4 text-slate-500 hover:text-slate-800">
-              <Menu size={24} />
-            </button>
-            <h1 className="text-xl font-bold text-slate-800 tracking-tight hidden sm:block capitalize">
-              {menuItems.find(m => m.id === activeTab)?.label}
-            </h1>
+    <DashboardLayout 
+      sidebar={
+        <Sidebar 
+          menuItems={menuItems} 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          userRole="Admin Controls" 
+        />
+      }
+    >
+      <Navbar 
+        activeTabLabel={menuItems.find(m => m.id === activeTab)?.label}
+        rightContent={
+          <div className="flex items-center space-x-3 cursor-pointer group">
+             <div className="flex flex-col items-end hidden md:flex">
+               <span className="text-sm font-bold text-slate-700 leading-tight">{user.name}</span>
+               <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-600">Administrator</span>
+             </div>
+             <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold border border-indigo-200 shadow-sm group-hover:scale-105 transition-transform">
+               {getAvatarInitials(user.name)}
+             </div>
           </div>
-          
-          <div className="flex items-center space-x-6">
-            <div className="relative hidden md:block">
-               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-               <input type="text" placeholder="Search system..." className="pl-10 pr-4 py-2 bg-slate-100 border-transparent focus:bg-white focus:border-indigo-500 border rounded-lg text-sm w-64 transition-all outline-none" />
-            </div>
-            <button className="relative text-slate-500 hover:text-indigo-600 transition-colors">
-              <Bell size={22} />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-            </button>
-            <div className="h-8 w-px bg-slate-200"></div>
-            <div className="flex items-center space-x-3 cursor-pointer group">
-               <div className="flex flex-col items-end hidden md:flex">
-                 <span className="text-sm font-bold text-slate-700 leading-tight">{user.name}</span>
-                 <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-600">Administrator</span>
-               </div>
-               <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold border border-indigo-200 shadow-sm group-hover:scale-105 transition-transform">
-                 {getAvatarInitials(user.name)}
-               </div>
-            </div>
-          </div>
-        </header>
+        }
+      />
 
         {/* Dynamic Content Area */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/50 p-6 sm:p-8 custom-scrollbar">
@@ -714,14 +674,13 @@ const AdminDashboard = () => {
           )}
 
         </main>
-      </div>
 
       {editingQuiz && (
         <QuestionEditorModal quiz={editingQuiz} onClose={() => setEditingQuiz(null)} />
       )}
 
       {postponeQuiz && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-[1000] p-4">
            <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md animate-fade-in">
               <h3 className="text-xl font-bold text-slate-800 mb-4">Postpone Quiz</h3>
               <form onSubmit={handlePostponeQuiz} className="space-y-4">
@@ -745,7 +704,7 @@ const AdminDashboard = () => {
 
       {/* Admin Emergency Modals */}
       {extendQuizId && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-[1000] p-4">
            <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-sm animate-fade-in">
               <h3 className="text-xl font-bold text-slate-800 mb-4">Extend Time</h3>
               <div className="space-y-4">
@@ -763,7 +722,7 @@ const AdminDashboard = () => {
       )}
 
       {broadcastQuizId && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-[1000] p-4">
            <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-sm animate-fade-in">
               <h3 className="text-xl font-bold text-slate-800 mb-4">Send Broadcast</h3>
               <div className="space-y-4">
@@ -779,7 +738,7 @@ const AdminDashboard = () => {
            </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 };
 

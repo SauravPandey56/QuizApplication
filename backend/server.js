@@ -17,6 +17,7 @@ import sessionRoutes from './src/routes/sessionRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
 import settingRoutes from './src/routes/settingRoutes.js';
 import feedbackRoutes from './src/routes/feedbackRoutes.js';
+import notificationRoutes from './src/routes/notificationRoutes.js';
 const app = express();
 
 // Set up promises for top level
@@ -38,6 +39,7 @@ app.use('/api/attempts', sessionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/feedbacks', feedbackRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ message: 'API is running...' });

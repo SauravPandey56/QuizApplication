@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import QuizSphereLogo from '../components/logo/QuizSphereLogo';
 import { 
   ShieldCheck, BarChart3, Cloud, Layers, 
-  Mail, Lock, Eye, EyeOff, CheckCircle2, MapPin, Send, Github, Linkedin
+  Mail, Lock, Eye, EyeOff, CheckCircle2, MapPin, Send, Terminal, Globe
 } from 'lucide-react';
 
 const Landing = () => {
@@ -268,12 +268,12 @@ const Landing = () => {
                    <Mail size={20} />
                  </div>
                  <h4 className="text-sm font-bold text-slate-800">Email</h4>
-                 <a href="mailto:pandeysaurav08@gmail.com" className="text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors break-all">pandeysaurav08@gmail.com</a>
+                 <a href="mailto:pandeysaurav108@gmail.com" className="text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors break-all">pandeysaurav108@gmail.com</a>
                </div>
                
                <div className="flex flex-col space-y-2 bg-white/60 p-6 rounded-2xl border border-white shadow-sm backdrop-blur-md">
                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mb-2">
-                   <Github size={20} />
+                   <Terminal size={20} />
                  </div>
                  <h4 className="text-sm font-bold text-slate-800">GitHub</h4>
                  <a href="https://github.com/SauravPandey56" target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors">SauravPandey56</a>
@@ -281,7 +281,7 @@ const Landing = () => {
 
                <div className="flex flex-col space-y-2 bg-white/60 p-6 rounded-2xl border border-white shadow-sm backdrop-blur-md">
                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-2">
-                   <Linkedin size={20} />
+                   <Globe size={20} />
                  </div>
                  <h4 className="text-sm font-bold text-slate-800">LinkedIn</h4>
                  <a href="https://www.linkedin.com/in/sauravpandey56" target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors">sauravpandey56</a>

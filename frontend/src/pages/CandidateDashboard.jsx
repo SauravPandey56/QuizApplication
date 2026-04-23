@@ -8,7 +8,10 @@ import {
 } from 'lucide-react';
 import QuizSphereLogo from '../components/logo/QuizSphereLogo';
 import ProfileEditor from '../components/profile/ProfileEditor';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import Timer from '../components/common/Timer';
+import DashboardLayout from '../components/layout/DashboardLayout';
+import Sidebar from '../components/layout/Sidebar';
+import Navbar from '../components/layout/Navbar';
 
 const COLORS = ['#4F46E5', '#EF4444', '#F59E0B', '#06B6D4'];
 
@@ -17,7 +20,6 @@ const CandidateDashboard = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [preparingEnvironments, setPreparingEnvironments] = useState({});
   
@@ -25,10 +27,7 @@ const CandidateDashboard = () => {
   const [quizzes, setQuizzes] = useState([]);
   const [attempts, setAttempts] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Welcome to QuizSphere', desc: 'Secure your academic profile to track rankings.', time: '2h ago', read: false },
-    { id: 2, title: 'New Module Uploaded', desc: 'A new quiz has been mapped to your course.', time: '1d ago', read: true }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   // Derived stats
   const completedAttempts = attempts.filter(a => a.status === 'completed');
@@ -56,20 +55,33 @@ const CandidateDashboard = () => {
         axios.get('/api/quizzes').then(res => setQuizzes(res.data.quizzes || [])).catch(() => {});
       }, 5000);
     }
+    
+    // Mark as read when opening notifications tab
+    if (activeTab === 'notifications') {
+      const hasUnread = notifications.some(n => !n.isRead);
+      if (hasUnread) {
+        axios.put('/api/notifications/read-all').then(() => {
+          setNotifications(prev => prev.map(n => ({...n, isRead: true})));
+        }).catch(err => console.error("Failed to mark notifications as read", err));
+      }
+    }
+    
     return () => clearInterval(pollInterval);
-  }, [activeTab]);
+  }, [activeTab, notifications]);
 
   const fetchDashboardData = async () => {
     try {
-      const [quizRes, attemptRes, leaderRes] = await Promise.all([
+      const [quizRes, attemptRes, leaderRes, notifRes] = await Promise.all([
         axios.get('/api/quizzes').catch(() => ({ data: { quizzes: [] } })),
         axios.get('/api/attempts').catch(() => ({ data: [] })),
-        axios.get('/api/attempts/leaderboard').catch(() => ({ data: [] }))
+        axios.get('/api/attempts/leaderboard').catch(() => ({ data: [] })),
+        axios.get('/api/notifications').catch(() => ({ data: [] }))
       ]);
       
       setQuizzes(quizRes.data.quizzes || []);
       setAttempts(attemptRes.data || []);
       setLeaderboard(leaderRes.data || []);
+      setNotifications(notifRes.data || []);
     } catch (err) {
       console.error("Data synchronization error:", err);
     }
@@ -128,79 +140,41 @@ const CandidateDashboard = () => {
     { id: 'contact', icon: Link2, label: 'Get in Touch' },
     { id: 'profile', icon: User, label: 'Academic Profile' },
   ];
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const menuItemsWithBadge = menuItems.map(item => 
+    item.id === 'notifications' && unreadCount > 0 
+      ? { ...item, badge: unreadCount } 
+      : item
+  );
 
   const liveUnattemptedQuizzes = quizzes.filter(q => q.state === 'LIVE' && !completedAttempts.some(a => a.quiz?._id === q._id));
 
   return (
-    <div className="flex w-full h-screen overflow-hidden">
-      
-      {/* Sidebar Navigation */}
-      <aside className={`bg-slate-900/90 backdrop-blur-xl border-r border-white/10 text-slate-300 w-64 h-full flex flex-col transition-all duration-300 z-50 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full fixed'}`}>
-        <div className="h-16 flex border-b border-white/10 items-center justify-between px-6 shrink-0 bg-slate-950/50">
-           <QuizSphereLogo size="sm" showText={true} />
-        </div>
-        
-        {/* Profile Snapshot */}
-        <div className="p-5 border-b border-white/10 flex items-center space-x-3 bg-white/5">
-           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-[#06B6D4] text-white flex items-center justify-center font-bold shadow-md">
-             {getAvatarInitials(user.name)}
-           </div>
-           <div>
-             <p className="text-sm font-bold text-white leading-tight">{user.name}</p>
-             <p className="text-[10px] uppercase font-bold text-[#06B6D4] tracking-widest">Candidate</p>
-           </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
-          <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 mt-2">Main Menu</p>
-          {menuItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
-                activeTab === item.id 
-                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 shadow-lg shadow-indigo-500/30 text-white font-medium' 
-                  : 'hover:bg-white/10 hover:text-white text-slate-400'
-              }`}
-            >
-              <item.icon size={20} className={activeTab === item.id ? 'text-indigo-100' : ''} />
-              <span>{item.label}</span>
-              {item.id === 'notifications' && <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">2</span>}
-            </button>
-          ))}
-        </div>
-        <div className="p-4 border-t border-white/10 shrink-0 bg-slate-950/30">
-          <button onClick={handleLogout} className="flex items-center space-x-3 text-slate-400 hover:text-white transition-colors w-full px-3 py-2">
-            <LogOut size={20} /><span>Sign Out securely</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content Viewport */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        
-        {/* Top Header */}
-        <header className="h-16 bg-white/40 backdrop-blur-md border-b border-white/30 flex items-center justify-between px-6 shrink-0 z-10 shadow-sm">
-          <div className="flex items-center">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="mr-4 text-slate-600 hover:text-indigo-600 transition-colors">
-              <Menu size={24} />
-            </button>
-            <h1 className="text-xl font-bold text-slate-800 tracking-tight hidden sm:block">
-              {menuItems.find(m => m.id === activeTab)?.label || 'Workspace'}
-            </h1>
-          </div>
-          
-          <div className="flex items-center space-x-6">
-            <div className="relative hidden md:block">
-               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-               <input type="text" placeholder="Search modules..." className="pl-10 pr-4 py-2 bg-white/50 border border-white/60 focus:bg-white focus:border-indigo-400 rounded-xl text-sm w-64 transition-all outline-none shadow-sm" />
+    <DashboardLayout 
+      sidebar={
+        <Sidebar 
+          menuItems={menuItemsWithBadge} 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          customTopSpace="Main Menu"
+          customHeader={
+            <div className="p-5 border-b border-slate-800 flex items-center space-x-3 bg-white/5">
+               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-[#06B6D4] text-white flex items-center justify-center font-bold shadow-md shrink-0">
+                 {getAvatarInitials(user.name)}
+               </div>
+               <div className="overflow-hidden">
+                 <p className="text-sm font-bold text-white leading-tight truncate">{user.name}</p>
+                 <p className="text-[10px] uppercase font-bold text-[#06B6D4] tracking-widest truncate">Candidate</p>
+               </div>
             </div>
-            <button onClick={() => setActiveTab('notifications')} className="relative text-slate-600 hover:text-indigo-600 transition-colors">
-              <Bell size={22} />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-            </button>
-          </div>
-        </header>
+          }
+        />
+      }
+    >
+      <Navbar 
+        activeTabLabel={menuItems.find(m => m.id === activeTab)?.label || 'Workspace'}
+        rightContent={<></>} 
+      />
 
         {/* Dynamic Content Frame */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 lg:p-8 custom-scrollbar">
@@ -348,7 +322,8 @@ const CandidateDashboard = () => {
                            </div>
                            {(isUpcoming || isEnvReady) && (
                              <div className="flex items-center text-sm font-black text-slate-700 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100">
-                               <Timer size={18} className="text-indigo-500 mr-2 shrink-0 animate-pulse"/> Exam starts in: {formatCountdown(diffSeconds)}
+                               <span className="mr-2">Exam starts in:</span>
+                               <Timer duration={diffSeconds} size={18} className="text-indigo-500" />
                              </div>
                            )}
                            {isLive && !isCompleted && (
@@ -556,19 +531,20 @@ const CandidateDashboard = () => {
             <div className="animate-fade-in max-w-3xl mx-auto space-y-6">
                <h1 className="text-2xl font-black text-slate-800 tracking-tight mb-8">System Alerts</h1>
                <div className="space-y-4">
+                 {notifications.length === 0 && <p className="text-slate-500 italic">No notifications yet.</p>}
                  {notifications.map(notif => (
-                   <div key={notif.id} className={`p-6 rounded-2xl border backdrop-blur-xl flex items-start space-x-4 transition-all hover:shadow-md ${notif.read ? 'bg-white/50 border-white/40 opacity-70' : 'bg-white/90 border-indigo-200 shadow-sm'}`}>
-                      <div className={`p-3 rounded-full mt-1 ${notif.read ? 'bg-slate-100 text-slate-400' : 'bg-indigo-100 text-indigo-600'}`}>
+                   <div key={notif._id || notif.id} className={`p-6 rounded-2xl border backdrop-blur-xl flex items-start space-x-4 transition-all hover:shadow-md ${notif.isRead ? 'bg-white/50 border-white/40 opacity-70' : 'bg-white/90 border-indigo-200 shadow-sm'}`}>
+                      <div className={`p-3 rounded-full mt-1 ${notif.isRead ? 'bg-slate-100 text-slate-400' : 'bg-indigo-100 text-indigo-600'}`}>
                         <Bell size={20}/>
                       </div>
                       <div className="flex-1">
                         <div className="flex justify-between items-start mb-1">
-                          <h4 className={`font-bold ${notif.read ? 'text-slate-700' : 'text-indigo-900'}`}>{notif.title}</h4>
-                          <span className="text-xs font-semibold text-slate-400">{notif.time}</span>
+                          <h4 className={`font-bold ${notif.isRead ? 'text-slate-700' : 'text-indigo-900'}`}>{notif.title}</h4>
+                          <span className="text-xs font-semibold text-slate-400">{notif.createdAt ? new Date(notif.createdAt).toLocaleDateString() : (notif.time || 'recent')}</span>
                         </div>
                         <p className="text-sm text-slate-600 font-medium leading-relaxed">{notif.desc}</p>
                       </div>
-                      {!notif.read && <div className="w-2.5 h-2.5 rounded-full bg-red-500 mt-2"></div>}
+                      {!notif.isRead && <div className="w-2.5 h-2.5 rounded-full bg-red-500 mt-2"></div>}
                    </div>
                  ))}
                </div>
@@ -701,7 +677,6 @@ const CandidateDashboard = () => {
           )}
 
         </main>
-      </div>
 
       {/* Global Exam Start Trigger Modal */}
       {liveUnattemptedQuizzes.length > 0 && (
@@ -724,8 +699,7 @@ const CandidateDashboard = () => {
           ))}
         </div>
       )}
-
-    </div>
+    </DashboardLayout>
   );
 };
 export default CandidateDashboard;
