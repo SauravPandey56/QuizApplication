@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { Menu, Search, Bell } from 'lucide-react';
 import { DashboardContext } from './DashboardLayout';
 
-const Navbar = ({ activeTabLabel, rightContent }) => {
+const Navbar = ({ activeTabLabel, rightContent, unreadCount = 0, onBellClick }) => {
   const { isSidebarOpen, setIsSidebarOpen } = useContext(DashboardContext);
 
   return (
@@ -21,9 +21,13 @@ const Navbar = ({ activeTabLabel, rightContent }) => {
            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
            <input type="text" placeholder="Search system..." className="pl-10 pr-4 py-2 bg-slate-100 border-transparent focus:bg-white focus:border-indigo-500 border rounded-lg text-sm w-64 transition-all outline-none shadow-sm" />
         </div>
-        <button className="relative text-slate-500 hover:text-indigo-600 transition-colors">
+        <button onClick={onBellClick} className="relative text-slate-500 hover:text-indigo-600 transition-colors">
           <Bell size={22} />
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 border-2 border-white rounded-full text-[10px] font-bold text-white flex items-center justify-center px-1">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </button>
         <div className="h-8 w-px bg-slate-200"></div>
         {rightContent}

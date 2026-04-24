@@ -28,6 +28,7 @@ const AdminDashboard = () => {
   const [performance, setPerformance] = useState([]);
   const [settings, setSettings] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
+  const [unreadFeedbackCount, setUnreadFeedbackCount] = useState(0);
 
   const [newCourse, setNewCourse] = useState('');
   const [newSetting, setNewSetting] = useState({ type: 'campus', value: '' });
@@ -45,13 +46,27 @@ const AdminDashboard = () => {
     fetchData();
   }, [activeTab]);
 
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await axios.get('/api/feedback/unread-count');
+        setUnreadFeedbackCount(res.data.unreadCount);
+      } catch (err) {
+        console.error('Error fetching unread count', err);
+      }
+    };
+    fetchUnreadCount();
+    const intervalId = setInterval(fetchUnreadCount, 15000); // Poll every 15 seconds
+    return () => clearInterval(intervalId);
+  }, []);
+
   const fetchData = () => {
     axios.get('/api/courses').then(res => setCourses(res.data)).catch(console.error);
     axios.get('/api/users').then(res => setUsers(res.data)).catch(console.error);
     axios.get('/api/users/performance').then(res => setPerformance(res.data)).catch(console.error);
     axios.get('/api/quizzes').then(res => setQuizzes(res.data.quizzes)).catch(console.error);
     axios.get('/api/settings').then(res => setSettings(res.data)).catch(console.error);
-    axios.get('/api/feedbacks').then(res => setFeedbacks(res.data)).catch(console.error);
+    axios.get('/api/feedback').then(res => setFeedbacks(res.data)).catch(console.error);
   };
 
   const handleLogout = () => {
@@ -114,11 +129,15 @@ const AdminDashboard = () => {
   };
 
   const markFeedbackRead = async (id) => {
-    try { await axios.put(`/api/feedbacks/${id}/read`); fetchData(); } catch { alert('Error'); }
+    try { 
+      await axios.put(`/api/feedback/${id}/read`); 
+      setUnreadFeedbackCount(prev => Math.max(0, prev - 1));
+      fetchData(); 
+    } catch { alert('Error'); }
   };
 
   const deleteFeedback = async (id) => {
-    try { await axios.delete(`/api/feedbacks/${id}`); fetchData(); } catch { alert('Error'); }
+    try { await axios.delete(`/api/feedback/${id}`); fetchData(); } catch { alert('Error'); }
   };
 
   const handleApproveQuiz = async (id) => {
@@ -192,7 +211,7 @@ const AdminDashboard = () => {
     { id: 'users', icon: Users, label: 'User Directory' },
     { id: 'results', icon: Activity, label: 'Performance Analytics' },
     { id: 'settings', icon: Settings, label: 'System Configuration' },
-    { id: 'feedback', icon: MessageSquare, label: 'Support & Feedback' },
+    { id: 'feedback', icon: MessageSquare, label: 'Support & Feedback', badge: unreadFeedbackCount > 0 ? unreadFeedbackCount : undefined },
   ];
 
   return (
@@ -208,6 +227,8 @@ const AdminDashboard = () => {
     >
       <Navbar 
         activeTabLabel={menuItems.find(m => m.id === activeTab)?.label}
+        unreadCount={unreadFeedbackCount}
+        onBellClick={() => setActiveTab('feedback')}
         rightContent={
           <div className="flex items-center space-x-3 cursor-pointer group">
              <div className="flex flex-col items-end hidden md:flex">

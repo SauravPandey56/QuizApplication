@@ -38,7 +38,7 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/attempts', sessionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/settings', settingRoutes);
-app.use('/api/feedbacks', feedbackRoutes);
+app.use('/api', feedbackRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 app.get('/api/health', (req, res) => {

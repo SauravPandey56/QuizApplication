@@ -25,6 +25,12 @@ const ExaminerDashboard = () => {
   const [courses, setCourses] = useState([]);
   const [settings, setSettings] = useState([]);
   
+  // Feedback Form State
+  const [feedbackCategory, setFeedbackCategory] = useState('');
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  
   // Quick Edit State
   const [editingQuiz, setEditingQuiz] = useState(null);
 
@@ -146,6 +152,34 @@ const ExaminerDashboard = () => {
       alert('Quiz successfully compiled!');
     } catch (err) {
       alert(err.response?.data?.message || 'Error creating quiz');
+    }
+  };
+
+  const submitFeedback = async (e) => {
+    e.preventDefault();
+    if(!feedbackCategory) return alert('Please select a transmission category.');
+    
+    setIsSubmittingFeedback(true);
+    try {
+      const payload = {
+        name: user.name,
+        email: user.email,
+        subject: `[${feedbackCategory.toUpperCase()}] Rating: ${feedbackRating}/5`,
+        message: feedbackMessage
+      };
+      const res = await axios.post('/api/feedback', payload);
+      if (res.status === 200 || res.status === 201) {
+        alert('Transmission successful: Thank you for your feedback. Our team will review it.');
+        setActiveTab('dashboard');
+        setFeedbackCategory('');
+        setFeedbackRating(5);
+        setFeedbackMessage('');
+      }
+    } catch (err) {
+      console.error('Feedback Error:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to submit feedback.');
+    } finally {
+      setIsSubmittingFeedback(false);
     }
   };
 
@@ -619,7 +653,7 @@ const ExaminerDashboard = () => {
                <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-[32px] p-8 lg:p-12 shadow-xl relative overflow-hidden">
                  <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none"></div>
                  
-                 <form className="relative z-10 space-y-6" onSubmit={(e) => { e.preventDefault(); alert('Transmission successful: Thank you for your feedback. Our team will review it.'); setActiveTab('dashboard'); }}>
+                 <form className="relative z-10 space-y-6" onSubmit={submitFeedback}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-sm font-bold text-slate-500">Authorized Reporter</label>
@@ -634,7 +668,7 @@ const ExaminerDashboard = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-sm font-bold text-slate-700">Transmission Category</label>
-                        <select className="w-full bg-white border border-slate-200 text-slate-800 font-medium rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 shadow-inner transition-all appearance-none" required>
+                        <select value={feedbackCategory} onChange={e => setFeedbackCategory(e.target.value)} className="w-full bg-white border border-slate-200 text-slate-800 font-medium rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 shadow-inner transition-all appearance-none" required>
                           <option value="">Select diagnostic class...</option>
                           <option value="bug">Bug Report</option>
                           <option value="feature">Feature Request</option>
@@ -646,7 +680,7 @@ const ExaminerDashboard = () => {
                         <label className="text-sm font-bold text-slate-700">Platform Experience Rating</label>
                         <div className="flex items-center space-x-2 pt-2">
                           {[1,2,3,4,5].map(star => (
-                            <button key={star} type="button" className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center font-bold transition-all hover:scale-110 shadow-sm ${star >= 4 ? 'border-[#06B6D4] text-[#06B6D4] hover:bg-[#06B6D4] hover:text-white' : 'border-indigo-400 text-indigo-400 hover:bg-indigo-400 hover:text-white'}`}>
+                            <button key={star} onClick={() => setFeedbackRating(star)} type="button" className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center font-bold transition-all hover:scale-110 shadow-sm ${feedbackRating >= star ? (feedbackRating >= 4 ? 'border-[#06B6D4] bg-[#06B6D4] text-white' : 'border-indigo-400 bg-indigo-400 text-white') : 'border-slate-200 text-slate-400 hover:border-indigo-200 hover:text-indigo-400'}`}>
                               {star}
                             </button>
                           ))}
@@ -656,12 +690,12 @@ const ExaminerDashboard = () => {
 
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700">Detailed Message</label>
-                      <textarea rows="4" className="w-full bg-white border border-slate-200 text-slate-800 font-medium rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 shadow-inner resize-none transition-all" placeholder="Describe your experience or outline reproduction steps..." required></textarea>
+                      <textarea value={feedbackMessage} onChange={e => setFeedbackMessage(e.target.value)} rows="4" className="w-full bg-white border border-slate-200 text-slate-800 font-medium rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 shadow-inner resize-none transition-all" placeholder="Describe your experience or outline reproduction steps..." required></textarea>
                     </div>
 
                     <div className="pt-4 border-t border-slate-200/60">
-                      <button type="submit" className="bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-extrabold py-3.5 px-8 rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all transform hover:-translate-y-1 active:scale-[0.98] w-full sm:w-auto">
-                        Transmit Feedback
+                      <button type="submit" disabled={isSubmittingFeedback} className="bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-extrabold py-3.5 px-8 rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all transform hover:-translate-y-1 active:scale-[0.98] w-full sm:w-auto disabled:opacity-70 disabled:hover:translate-y-0 text-center">
+                        {isSubmittingFeedback ? 'Transmitting...' : 'Transmit Feedback'}
                       </button>
                     </div>
                  </form>

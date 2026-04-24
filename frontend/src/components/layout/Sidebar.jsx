@@ -46,7 +46,12 @@ const Sidebar = ({ menuItems, activeTab, setActiveTab, userRole, customHeader, c
             } ${isSidebarOpen ? 'px-3 space-x-3' : 'justify-center px-0'}`}
             title={!isSidebarOpen ? item.label : ''}
           >
-            <item.icon size={20} className={activeTab === item.id ? 'text-indigo-200 shrink-0' : 'text-slate-400 shrink-0'} />
+            <div className="relative">
+              <item.icon size={20} className={activeTab === item.id ? 'text-indigo-200 shrink-0' : 'text-slate-400 shrink-0'} />
+              {!isSidebarOpen && item.badge && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              )}
+            </div>
             {isSidebarOpen && (
                <>
                  <span className="whitespace-nowrap flex-1 text-left">{item.label}</span>

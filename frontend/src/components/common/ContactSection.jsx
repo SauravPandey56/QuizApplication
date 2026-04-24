@@ -53,17 +53,16 @@ const ContactSection = () => {
     setIsSubmitting(true);
     
     try {
-      // Use axios so it automatically inherits the http://localhost:5000 baseURL from main.jsx
-      const response = await axios.post('/api/feedbacks', formData);
+      // Use absolute URL as requested
+      const response = await axios.post('http://localhost:5000/api/feedback', formData);
       
       if (response.status === 201 || response.status === 200) {
         setIsSuccess(true);
         setFormData({ name: '', email: '', subject: '', message: '' });
       }
     } catch (err) {
-      console.error('Feedback submission error:', err);
-      // Optional: Add toast or alert for user facing error here
-      alert(err.response?.data?.message || 'Failed to send message. Please try again later.');
+      console.error('FULL ERROR:', err);
+      alert(err.message);
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,7 @@
 import Feedback from '../models/Feedback.js';
 
 export const submitFeedback = async (req, res) => {
+  console.log("Feedback API hit:", req.body);
   try {
     const { name, email, subject, message } = req.body;
     if (!name || !email || !message) {
@@ -9,6 +10,7 @@ export const submitFeedback = async (req, res) => {
     const feedback = await Feedback.create({ name, email, subject, message });
     res.status(201).json({ message: 'Thank you! Your feedback has been sent to the admin.', feedback });
   } catch (error) {
+    console.error("Feedback creation error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -39,6 +41,15 @@ export const deleteFeedback = async (req, res) => {
   try {
     await Feedback.findByIdAndDelete(req.params.id);
     res.json({ message: 'Feedback deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getUnreadFeedbackCount = async (req, res) => {
+  try {
+    const count = await Feedback.countDocuments({ isRead: false });
+    res.json({ unreadCount: count });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

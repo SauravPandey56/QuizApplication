@@ -25,6 +25,10 @@ const getDeploymentState = (deployment) => {
 };
 
 const mapToFrontendQuiz = (deployment) => {
+  const now = Date.now();
+  const startTime = deployment.startTime ? new Date(deployment.startTime).getTime() : null;
+  const endTime = deployment.endTime ? new Date(deployment.endTime).getTime() : (startTime ? startTime + (deployment.duration * 60 * 1000) : null);
+
   // We merge Quiz and ExamDeployment into a flat "quiz" object for the frontend
   return {
     _id: deployment._id, // Deployment ID becomes the primary identifier
@@ -42,7 +46,7 @@ const mapToFrontendQuiz = (deployment) => {
     // Deployment fields
     duration: deployment.duration,
     startTime: deployment.startTime,
-    endTime: deployment.endTime,
+    endTime: endTime ? new Date(endTime).toISOString() : null,
     allowRetake: deployment.allowRetake,
     isPaused: deployment.isPaused,
     broadcastMessage: deployment.broadcastMessage,
@@ -54,7 +58,9 @@ const mapToFrontendQuiz = (deployment) => {
     
     // Calculated state
     status: deployment.quiz.status, // Original quiz status
-    state: getDeploymentState(deployment)
+    state: getDeploymentState(deployment),
+    isLive: !!deployment.startTime && deployment.status !== 'ARCHIVED',
+    isCompleted: deployment.status === 'COMPLETED' || (startTime && now >= endTime)
   };
 };
 

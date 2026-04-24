@@ -33,17 +33,23 @@ const Landing = () => {
     e.preventDefault();
     setFeedbackLoading(true);
     try {
-      const response = await fetch('/api/feedbacks', {
+      // Using explicit absolute URL and correct singular endpoint
+      const response = await fetch('http://localhost:5000/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(feedbackData)
       });
+      
       if (response.ok) {
         setFeedbackSuccess(true);
         setFeedbackData({ name: '', email: '', subject: '', message: '' });
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Server responded with status: ${response.status}`);
       }
     } catch (err) {
-      console.error('Failed to submit feedback');
+      console.error('FULL ERROR:', err);
+      alert(err.message || 'Failed to submit feedback');
     } finally {
       setFeedbackLoading(false);
     }
