@@ -1,7 +1,8 @@
 import React, { useContext, useState } from 'react';
 import { Outlet, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { LogOut } from 'lucide-react';
+import { ThemeContext } from '../../context/ThemeContext';
+import { LogOut, Sun, Moon } from 'lucide-react';
 import Chatbot from '../Chatbot';
 import Footer from './Footer';
 import QuizSphereLogo from '../logo/QuizSphereLogo';
@@ -10,6 +11,7 @@ import axios from 'axios';
 
 const Layout = () => {
   const { user, logout } = useContext(AuthContext);
+  const { theme, toggleTheme } = useContext(ThemeContext);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -45,6 +47,9 @@ const Layout = () => {
               <span className="text-slate-600 font-medium hidden sm:block">
                 Welcome, {user.name} ({user.role})
               </span>
+              <button onClick={toggleTheme} className="text-slate-500 hover:text-indigo-600 transition-colors">
+                {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
+              </button>
               <button 
                 onClick={handleLogout}
                 className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white/50 hover:bg-white/80 transition-all text-slate-700 shadow-sm border border-slate-200"

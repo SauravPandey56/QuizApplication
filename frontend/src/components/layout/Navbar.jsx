@@ -1,9 +1,11 @@
 import React, { useContext } from 'react';
-import { Menu, Search, Bell } from 'lucide-react';
+import { Menu, Search, Bell, Sun, Moon } from 'lucide-react';
 import { DashboardContext } from './DashboardLayout';
+import { ThemeContext } from '../../context/ThemeContext';
 
 const Navbar = ({ activeTabLabel, rightContent, unreadCount = 0, onBellClick }) => {
   const { isSidebarOpen, setIsSidebarOpen } = useContext(DashboardContext);
+  const { theme, toggleTheme } = useContext(ThemeContext);
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10 w-full transition-all duration-300">
@@ -28,6 +30,9 @@ const Navbar = ({ activeTabLabel, rightContent, unreadCount = 0, onBellClick }) 
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
+        </button>
+        <button onClick={toggleTheme} className="text-slate-500 hover:text-indigo-600 transition-colors">
+          {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
         </button>
         <div className="h-8 w-px bg-slate-200"></div>
         {rightContent}
