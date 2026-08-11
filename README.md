@@ -209,7 +209,7 @@ This project is licensed under the **MIT License**.
 **Saurav Pandey**
 
 - GitHub: https://github.com/SauravPandey56
-- LinkedIn: *(Add your LinkedIn profile URL)*
+- LinkedIn: www.linkedin.com/in/sauravpandey56
 
 ---
 
