@@ -29,7 +29,7 @@ const DashboardLayout = ({ sidebar, children }) => {
 
   return (
     <DashboardContext.Provider value={{ isSidebarOpen, setIsSidebarOpen }}>
-      <div className="flex h-screen w-full bg-[#F8FAFC] overflow-hidden relative font-sans text-slate-800">
+      <div className="flex h-screen w-full bg-slate-50 overflow-hidden relative font-sans text-slate-800">
         
         {/* Mobile Overlay Background */}
         <div 
