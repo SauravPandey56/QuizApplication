@@ -20,6 +20,11 @@ const examDeploymentSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  maxAttempts: {
+    type: Number,
+    min: 1,
+    default: null
+  },
   status: {
     type: String,
     enum: ['SCHEDULED', 'UPCOMING', 'LIVE', 'COMPLETED', 'ARCHIVED'],

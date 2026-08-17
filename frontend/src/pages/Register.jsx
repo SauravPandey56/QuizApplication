@@ -35,7 +35,7 @@ const Register = () => {
           setFormData(prev => ({ ...prev, course: coursesRes.data[0]._id }));
         }
         setSettings(settingsRes.data);
-      } catch (err) {
+      } catch {
         console.error('Data fetch failed');
       }
     };

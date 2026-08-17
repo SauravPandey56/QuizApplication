@@ -1,30 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { 
-  Timer, CheckCircle, AlertCircle, Maximize, 
+import {
+  Timer, CheckCircle, AlertCircle, Maximize,
   ChevronRight, ChevronLeft, Flag, Info
 } from 'lucide-react';
 
 const CandidateAttempt = () => {
   const { attemptId } = useParams();
   const navigate = useNavigate();
-  
-  const [attempt, setAttempt] = useState(null);
+
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [responses, setResponses] = useState({});
   const [reviewMarks, setReviewMarks] = useState({}); // Tracking strictly 'marked for review' boolean map
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   const [timeLeft, setTimeLeft] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // Proctoring States
   const [isStarted, setIsStarted] = useState(false);
   const [warnings, setWarnings] = useState(0);
-  
+
   // Refs
   const responsesRef = useRef({});
   const handlingViolationRef = useRef(false);
@@ -39,34 +38,33 @@ const CandidateAttempt = () => {
       try {
         const { data: allAttempts } = await axios.get('/api/attempts');
         const currentAttempt = allAttempts.find(a => a._id === attemptId);
-        
+
         if (!currentAttempt) throw new Error('Attempt not found');
         if (currentAttempt.status === 'completed') {
-          navigate('/'); 
+          navigate('/');
           return;
         }
 
-        setAttempt(currentAttempt);
-        
+
         const { data: quizData } = await axios.get('/api/quizzes');
-        const currentQuiz = quizData.quizzes.find(q => q._id === currentAttempt.quiz._id);
+        const currentQuiz = quizData.quizzes.find(q => String(q.deploymentId || q._id) === String(currentAttempt.deploymentId));
         setQuiz(currentQuiz);
 
-        const { data: qData } = await axios.get(`/api/quizzes/${currentQuiz._id}/questions`);
+        const { data: qData } = await axios.get(`/api/quizzes/${currentAttempt.quizId}/questions`);
         setQuestions(qData);
-        
-        const startTime = new Date(currentAttempt.createdAt).getTime();
+
+        const startTime = new Date(currentAttempt.startTime || currentAttempt.createdAt).getTime();
         const endTime = startTime + (currentQuiz.duration * 60 * 1000);
         const remaining = Math.floor((endTime - Date.now()) / 1000);
-        
+
         setTimeLeft(remaining > 0 ? remaining : 0);
         setLoading(false);
-      } catch (err) {
+      } catch {
         setError('Failed to load quiz attempt.');
         setLoading(false);
       }
     };
-    
+
     fetchAttemptData();
   }, [attemptId, navigate]);
 
@@ -75,8 +73,8 @@ const CandidateAttempt = () => {
 
     const pollInterval = setInterval(async () => {
       try {
-        const { data } = await axios.get(`/api/quizzes/${quiz._id}`);
-        
+        const { data } = await axios.get(`/api/quizzes/${quiz.deploymentId || quiz._id}`);
+
         if (data.status === 'COMPLETED' || data.status === 'ARCHIVED') {
           alert('ADMIN COMMAND: EXAM HAS BEEN FORCEFULLY TERMINATED.');
           handleSubmit(true);
@@ -100,7 +98,9 @@ const CandidateAttempt = () => {
     }, 30000);
 
     return () => clearInterval(pollInterval);
-  }, [isStarted, loading, quiz?._id]);
+    // The interval is recreated only when the exam identity or loading state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStarted, loading, quiz?.deploymentId, quiz?._id]);
 
   useEffect(() => {
     if (!isStarted || loading || timeLeft <= 0) return;
@@ -122,7 +122,7 @@ const CandidateAttempt = () => {
 
       setWarnings(prev => {
         const newWarnings = prev + 1;
-        
+
         if (newWarnings === 1) {
           setTimeout(() => {
              alert("WARNING (1/3): You must not switch tabs, minimize the window, or open other apps. The next violation will be your final warning.");
@@ -159,12 +159,12 @@ const CandidateAttempt = () => {
 
     const handleContextMenu = (e) => e.preventDefault();
     const handleCopyPaste = (e) => e.preventDefault();
-    
+
     const handleKeyDown = (e) => {
       if (
-        e.key === 'F5' || 
-        (e.ctrlKey && e.key.toLowerCase() === 'r') || 
-        (e.metaKey && e.key.toLowerCase() === 'r') || 
+        e.key === 'F5' ||
+        (e.ctrlKey && e.key.toLowerCase() === 'r') ||
+        (e.metaKey && e.key.toLowerCase() === 'r') ||
         e.key === 'F12' ||
         (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i') ||
         (e.ctrlKey && e.key.toLowerCase() === 'c') ||
@@ -203,7 +203,7 @@ const CandidateAttempt = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
     // eslint-disable-next-line
-  }, [isStarted, loading, timeLeft]); 
+  }, [isStarted, loading, timeLeft]);
 
   const handleOptionSelect = (questionId, optionId) => {
     const updated = { ...responses, [questionId]: optionId };
@@ -220,7 +220,7 @@ const CandidateAttempt = () => {
 
   const handleSubmit = async (autoSubmit = false) => {
     if (!autoSubmit && !window.confirm('Are you absolutely sure you want to submit your quiz payload for grading?')) return;
-    
+
     try {
       const currentResponses = responsesRef.current;
       const formattedResponses = Object.keys(currentResponses).map(qId => ({
@@ -229,13 +229,13 @@ const CandidateAttempt = () => {
       }));
 
       const { data } = await axios.post(`/api/attempts/${attemptId}/submit`, { responses: formattedResponses });
-      
+
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(err => console.log(err));
       }
 
       navigate(`/attempt/${attemptId}/result`, { state: { result: data, quiz } });
-    } catch (err) {
+    } catch {
       alert('Network Error submitting quiz validation payload.');
     }
   };
@@ -246,7 +246,7 @@ const CandidateAttempt = () => {
         await document.documentElement.requestFullscreen();
       }
       setIsStarted(true);
-    } catch (err) {
+    } catch {
       alert("Please allow fullscreen to start the test safely. Your browser might require you to interact directly to enable it.");
     }
   };
@@ -259,10 +259,10 @@ const CandidateAttempt = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 relative overflow-hidden z-10">
         <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-indigo-500 rounded-full mix-blend-multiply filter blur-[150px] opacity-20 pointer-events-none -z-10"></div>
         <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-[#06B6D4] rounded-full mix-blend-multiply filter blur-[150px] opacity-20 pointer-events-none -z-10"></div>
-        
+
         <div className="max-w-3xl mx-auto p-12 bg-white/70 backdrop-blur-xl shadow-2xl rounded-[32px] text-center border border-white/50 relative">
           <h2 className="text-4xl font-black text-slate-800 mb-8 tracking-tight leading-tight">{quiz?.title}</h2>
-          
+
           <div className="bg-amber-50 border border-amber-200 text-amber-800 p-8 rounded-2xl mb-10 text-left space-y-5 shadow-sm shadow-amber-500/5">
              <h3 className="font-bold flex items-center text-xl tracking-tight"><AlertCircle className="mr-3 text-amber-600"/> Security & Proctoring Environment</h3>
              <ul className="list-disc pl-6 space-y-3 text-amber-900/80 font-medium">
@@ -272,8 +272,8 @@ const CandidateAttempt = () => {
                <li>Violating these conditions triggers an immediate warning. After 3 recorded warnings, your test is automatically isolated and submitted.</li>
              </ul>
           </div>
-          
-          <button 
+
+          <button
             onClick={startTest}
             className="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-black py-4 px-12 rounded-2xl shadow-xl shadow-indigo-500/30 transition-all hover:-translate-y-1 group flex items-center justify-center space-x-3 mx-auto text-xl w-full sm:w-auto"
           >
@@ -309,7 +309,7 @@ const CandidateAttempt = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col pt-16 relative overflow-hidden">
       {/* Background aesthetics */}
       <div className="fixed top-0 right-0 w-1/3 h-1/2 bg-[#4F46E5]/10 rounded-full blur-[150px] pointer-events-none"></div>
-      
+
       {/* Header Bar */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-xl border-b border-white/50 z-50 flex items-center justify-between px-6 shadow-[0_4px_30px_rgb(0,0,0,0.03)]">
          <div className="flex items-center">
@@ -324,7 +324,7 @@ const CandidateAttempt = () => {
                  <Timer size={20} className="mr-1.5" /> {formatTime(timeLeft)}
                </div>
             </div>
-            <button 
+            <button
                onClick={() => handleSubmit(false)}
                className="bg-gradient-to-r from-emerald-500 to-emerald-400 text-white font-bold py-2.5 px-6 rounded-lg shadow-md shadow-emerald-500/20 hover:-translate-y-0.5 transition-all text-sm flex items-center"
             >
@@ -334,19 +334,19 @@ const CandidateAttempt = () => {
       </header>
 
       <div className="flex flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 gap-8 z-10 relative">
-         
+
          {/* Main Question Area */}
          <div className="flex-1 flex flex-col">
-            
+
             {currentQ && (
               <div className="bg-white/80 backdrop-blur-xl border border-white/50 rounded-3xl p-8 lg:p-10 shadow-xl flex-1 flex flex-col relative overflow-hidden">
                  {/* Internal Question Header */}
                  <div className="flex justify-between items-start mb-8 pb-6 border-b border-slate-100">
                     <h2 className="text-2xl font-bold text-slate-800 flex items-center font-mono">
-                      <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg mr-3 shadow-inner">Q{currentQuestionIndex + 1}</span> 
+                      <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg mr-3 shadow-inner">Q{currentQuestionIndex + 1}</span>
                     </h2>
-                    
-                    <button 
+
+                    <button
                        onClick={() => toggleReviewMark(currentQ._id)}
                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-bold text-sm transition-colors border ${reviewMarks[currentQ._id] ? 'bg-amber-100 border-amber-200 text-amber-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
                     >
@@ -359,23 +359,23 @@ const CandidateAttempt = () => {
 
                  <div className="space-y-4 max-w-4xl">
                    {currentQ.options.map((opt, idx) => {
-                     const isSelected = responses[currentQ._id] === opt.id;
+                     const isSelected = responses[currentQ._id] === opt;
                      return (
-                       <label 
-                         key={opt.id} 
+                       <label
+                         key={`${currentQ._id}-${idx}`}
                          className={`group flex items-center p-5 rounded-2xl cursor-pointer transition-all duration-300 border-2 ${isSelected ? 'border-indigo-500 bg-indigo-50/70 shadow-md transform scale-[1.01]' : 'border-slate-200/60 hover:border-indigo-300 hover:bg-slate-50/80 hover:shadow-sm'}`}
                        >
-                         <input 
-                           type="radio" name={`question-${currentQ._id}`} value={opt.id}
+                         <input
+                           type="radio" name={`question-${currentQ._id}`} value={opt}
                            checked={isSelected}
-                           onChange={() => handleOptionSelect(currentQ._id, opt.id)}
+                           onChange={() => handleOptionSelect(currentQ._id, opt)}
                            className="hidden"
                          />
                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg mr-5 transition-all duration-300 ${isSelected ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-110' : 'bg-slate-100 border border-slate-200 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 group-hover:border-indigo-200'}`}>
                            {letters[idx]}
                          </div>
                          <span className={`text-lg transition-colors font-medium flex-1 ${isSelected ? 'text-indigo-900' : 'text-slate-700 group-hover:text-slate-900'}`}>{opt.text}</span>
-                         
+
                          {isSelected && <CheckCircle className="text-indigo-500 ml-4 animate-in fade-in zoom-in" size={24}/>}
                        </label>
                      );
@@ -384,15 +384,15 @@ const CandidateAttempt = () => {
 
                  {/* Question Footer Controls */}
                  <div className="mt-auto pt-10 flex justify-between items-center">
-                    <button 
+                    <button
                        onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
                        disabled={currentQuestionIndex === 0}
                        className={`flex items-center px-6 py-3 rounded-xl font-bold transition-all text-sm ${currentQuestionIndex === 0 ? 'opacity-0 cursor-default' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:shadow-sm'}`}
                     >
                        <ChevronLeft size={16} className="mr-1"/> Previous
                     </button>
-                    
-                    <button 
+
+                    <button
                        onClick={() => setCurrentQuestionIndex(Math.min(questions.length - 1, currentQuestionIndex + 1))}
                        disabled={currentQuestionIndex === questions.length - 1}
                        className={`flex items-center px-8 py-3 rounded-xl font-bold transition-all text-sm ${currentQuestionIndex === questions.length - 1 ? 'opacity-0 cursor-default' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 hover:-translate-y-0.5'}`}
@@ -406,16 +406,16 @@ const CandidateAttempt = () => {
 
          {/* Sidebar Navigation Palette */}
          <div className="w-80 shrink-0 flex flex-col space-y-6">
-            
+
             {/* Legend / Status Card */}
             <div className="bg-white/80 backdrop-blur-xl border border-white/50 rounded-3xl p-6 shadow-xl">
                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-5 border-b border-slate-100 pb-3">Test Metrics</h3>
-               
+
                <div className="flex items-center justify-between mb-4 bg-slate-50 border border-slate-100 p-3 rounded-xl">
                   <span className="text-xs font-bold text-slate-600 uppercase">Completion Rate</span>
                   <span className="text-sm font-black text-indigo-600">{progressCount} / {questions.length}</span>
                </div>
-               
+
                <div className="w-full bg-slate-100 rounded-full h-2 mb-6 overflow-hidden">
                   <div className="bg-indigo-500 h-2 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
                </div>
@@ -439,13 +439,13 @@ const CandidateAttempt = () => {
             {/* Question Palette Matrix */}
             <div className="bg-white/80 backdrop-blur-xl border border-white/50 rounded-3xl p-6 shadow-xl flex-1 flex flex-col max-h-[60vh]">
                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-5 border-b border-slate-100 pb-3">Question Palette</h3>
-               
+
                <div className="grid grid-cols-5 gap-3 overflow-y-auto custom-scrollbar p-1 pb-4">
                  {questions.map((q, i) => {
                    const isAnswered = responses[q._id] !== undefined;
                    const isMarked = reviewMarks[q._id];
                    const isActive = currentQuestionIndex === i;
-                   
+
                    let stateClasses = "bg-white border-slate-200 text-slate-600 hover:border-indigo-300"; // Unanswered
                    if (isMarked) stateClasses = "bg-amber-400 border-amber-500 text-amber-900"; // Marked (highest visual priority usually)
                    else if (isAnswered) stateClasses = "bg-emerald-500 border-emerald-600 text-white shadow-emerald-500/20"; // Answered
@@ -461,7 +461,7 @@ const CandidateAttempt = () => {
                    );
                  })}
                </div>
-               
+
                <div className="mt-auto pt-4 border-t border-slate-100 flex items-start text-[10px] uppercase font-bold text-slate-400 tracking-widest">
                   <Info size={14} className="mr-2 shrink-0 -mt-0.5" />
                   <p>Click any block to navigate directly. Answers are saved locally implicitly.</p>

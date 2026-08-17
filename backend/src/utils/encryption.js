@@ -1,31 +1,48 @@
 import crypto from 'crypto';
-import dotenv from 'dotenv';
-dotenv.config();
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex'); // Must be 256 bits (32 characters)
-const IV_LENGTH = 16; // For AES, this is always 16
+const IV_LENGTH = 16;
+const KEY_LENGTH_BYTES = 32;
+
+export const getEncryptionKey = () => {
+  const configuredKey = process.env.ENCRYPTION_KEY;
+
+  if (!configuredKey) {
+    throw new Error('ENCRYPTION_KEY is required and must contain 64 hexadecimal characters.');
+  }
+
+  if (!/^[0-9a-fA-F]{64}$/.test(configuredKey)) {
+    throw new Error('ENCRYPTION_KEY must contain exactly 64 hexadecimal characters (32 bytes).');
+  }
+
+  const key = Buffer.from(configuredKey, 'hex');
+  if (key.length !== KEY_LENGTH_BYTES) {
+    throw new Error('ENCRYPTION_KEY must decode to exactly 32 bytes.');
+  }
+
+  return key;
+};
 
 export function encrypt(text) {
-  let iv = crypto.randomBytes(IV_LENGTH);
-  // Ensure key is 32 bytes (256 bits)
-  const key = Buffer.from(ENCRYPTION_KEY, 'hex'); 
-
-  let cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
-  let encrypted = cipher.update(text.toString());
-  
-  encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return iv.toString('hex') + ':' + encrypted.toString('hex');
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv('aes-256-cbc', getEncryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(String(text), 'utf8'), cipher.final()]);
+  return `${iv.toString('hex')}:${encrypted.toString('hex')}`;
 }
 
-export function decrypt(text) {
-  let textParts = text.split(':');
-  let iv = Buffer.from(textParts.shift(), 'hex');
-  let encryptedText = Buffer.from(textParts.join(':'), 'hex');
-  const key = Buffer.from(ENCRYPTION_KEY, 'hex');
-  
-  let decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-  let decrypted = decipher.update(encryptedText);
-  
-  decrypted = Buffer.concat([decrypted, decipher.final()]);
-  return decrypted.toString();
+export function decrypt(payload) {
+  if (typeof payload !== 'string' || !payload.includes(':')) {
+    throw new Error('Invalid encrypted answer format.');
+  }
+
+  const [ivHex, encryptedHex] = payload.split(':');
+  const iv = Buffer.from(ivHex, 'hex');
+  const encryptedText = Buffer.from(encryptedHex, 'hex');
+
+  if (iv.length !== IV_LENGTH || encryptedText.length === 0) {
+    throw new Error('Invalid encrypted answer payload.');
+  }
+
+  const decipher = crypto.createDecipheriv('aes-256-cbc', getEncryptionKey(), iv);
+  const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
+  return decrypted.toString('utf8');
 }

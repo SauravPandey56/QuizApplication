@@ -8,7 +8,7 @@ import { ThemeProvider } from './context/ThemeContext.jsx';
 import ErrorBoundary from './components/layout/ErrorBoundary.jsx';
 
 // Set up Axios default URL based on environment
-axios.defaults.baseURL = 'http://localhost:5000';
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || '';
 
 let rootElement = document.getElementById('root');
 if (!rootElement) {

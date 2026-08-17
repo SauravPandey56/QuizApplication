@@ -1,5 +1,5 @@
-import Question from '../models/Question.js';
 import Quiz from '../models/Quiz.js';
+import Question from '../models/Question.js';
 import { encrypt } from '../utils/encryption.js';
 
 export const addQuestion = async (req, res) => {

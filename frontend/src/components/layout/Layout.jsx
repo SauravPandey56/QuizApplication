@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext } from 'react';
 import { Outlet, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -7,7 +7,6 @@ import Chatbot from '../Chatbot';
 import Footer from './Footer';
 import QuizSphereLogo from '../logo/QuizSphereLogo';
 import AnimatedBackground from './AnimatedBackground';
-import axios from 'axios';
 
 const Layout = () => {
   const { user, logout } = useContext(AuthContext);
