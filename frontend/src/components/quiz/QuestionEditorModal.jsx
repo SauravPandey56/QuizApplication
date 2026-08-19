@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import { useCallback } from 'react';
 import axios from 'axios';
 import { X, Plus } from 'lucide-react';
 
@@ -13,24 +14,24 @@ const QuestionEditorModal = ({ quiz, onClose }) => {
     negativeMarks: 0
   });
 
+  const fetchQuestions = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`/api/quizzes/${quiz.quizId || quiz._id}/questions`);
+      setQuestions(data);
+    } catch (error) {
+      console.error(error);
+    }
+  }, [quiz]);
+
   useEffect(() => {
     fetchQuestions();
-    
+
     // Lock background interactions and prevent scrolling
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [quiz]);
-
-  const fetchQuestions = async () => {
-    try {
-      const { data } = await axios.get(`/api/quizzes/${quiz._id}/questions`);
-      setQuestions(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  }, [fetchQuestions]);
 
   const handleOptionChange = (index, value) => {
     const newOptions = [...formData.options];
@@ -51,7 +52,7 @@ const QuestionEditorModal = ({ quiz, onClose }) => {
     if (!formData.correctAnswer) return alert('Please select a strictly marked correct answer by clicking its radio button.');
     
     try {
-      await axios.post(`/api/quizzes/${quiz._id}/questions`, formData);
+      await axios.post(`/api/quizzes/${quiz.quizId || quiz._id}/questions`, formData);
       setFormData({ text: '', options: ['', '', '', ''], correctAnswer: '', marks: 1, negativeMarks: 0 });
       fetchQuestions();
     } catch (err) {

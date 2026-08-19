@@ -1,5 +1,6 @@
 import Quiz from '../models/Quiz.js';
 import ExamDeployment from '../models/ExamDeployment.js';
+import { buildCandidateEligibilityQuery } from '../utils/examEligibility.js';
 
 const getDeploymentState = (deployment) => {
   if (deployment.status === 'ARCHIVED') return 'ARCHIVED';
@@ -29,10 +30,13 @@ const mapToFrontendQuiz = (deployment) => {
   const startTime = deployment.startTime ? new Date(deployment.startTime).getTime() : null;
   const endTime = deployment.endTime ? new Date(deployment.endTime).getTime() : (startTime ? startTime + (deployment.duration * 60 * 1000) : null);
 
+  const deploymentState = getDeploymentState(deployment);
+
   // We merge Quiz and ExamDeployment into a flat "quiz" object for the frontend
   return {
-    _id: deployment._id, // Deployment ID becomes the primary identifier
-    quizId: deployment.quiz._id, // Real Quiz ID
+    _id: deployment._id, // Backward-compatible deployment identifier
+    deploymentId: deployment._id,
+    quizId: deployment.quiz._id,
     title: deployment.quiz.title,
     description: deployment.quiz.description,
     course: deployment.quiz.course,
@@ -58,9 +62,9 @@ const mapToFrontendQuiz = (deployment) => {
     
     // Calculated state
     status: deployment.quiz.status, // Original quiz status
-    state: getDeploymentState(deployment),
-    isLive: !!deployment.startTime && deployment.status !== 'ARCHIVED',
-    isCompleted: deployment.status === 'COMPLETED' || (startTime && now >= endTime)
+    state: deploymentState,
+    isLive: deploymentState === 'LIVE',
+    isCompleted: deploymentState === 'COMPLETED'
   };
 };
 
@@ -71,28 +75,10 @@ export const getQuizzes = async (req, res) => {
       query = { createdBy: req.user._id };
     } else if (req.user.role === 'candidate') {
       const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000);
-      query = { 
-        status: { $in: ['SCHEDULED', 'UPCOMING', 'LIVE', 'COMPLETED'] }, 
-        startTime: { $lte: oneHourFromNow }, 
-        $or: [
-          { universityCampus: req.user.universityCampus },
-          { universityCampus: { $exists: false } },
-          { universityCampus: "" }
-        ],
-        $or: [
-          { branch: req.user.branch },
-          { branch: { $exists: false } },
-          { branch: "" }
-        ],
-        $or: [
-          { semester: req.user.semester },
-          { semester: { $exists: false } }
-        ],
-        $or: [
-          { section: req.user.section },
-          { section: { $exists: false } },
-          { section: "" }
-        ]
+      query = {
+        status: { $in: ['SCHEDULED', 'UPCOMING', 'LIVE'] },
+        startTime: { $lte: oneHourFromNow },
+        ...buildCandidateEligibilityQuery(req.user)
       };
     }
     
@@ -115,11 +101,9 @@ export const getQuizzes = async (req, res) => {
     // Additional filtering for candidates based on Quiz properties (e.g. course match, since course is in Quiz not deployment)
     let filteredDeployments = deployments;
     if (req.user.role === 'candidate') {
-        filteredDeployments = deployments.filter(dep => 
-            dep.quiz && 
-            dep.quiz.course && 
-            dep.quiz.course._id.toString() === req.user.course.toString() &&
-            dep.quiz.isActive
+        filteredDeployments = deployments.filter(dep =>
+          dep.quiz && dep.quiz.isActive &&
+          (!dep.quiz.course || String(dep.quiz.course._id || dep.quiz.course) === String(req.user.course))
         );
     }
       
@@ -336,6 +320,7 @@ export const postponeQuiz = async (req, res) => {
   try {
     const { startTime, endTime } = req.body;
     const deployment = await ExamDeployment.findById(req.params.id).populate('quiz');
+    if (!deployment) return res.status(404).json({ message: 'Exam not found' });
 
     deployment.startTime = startTime || deployment.startTime;
     deployment.endTime = endTime || deployment.endTime;
@@ -406,8 +391,11 @@ export const forceSubmit = async (req, res) => {
 
 export const deleteQuiz = async (req, res) => {
   try {
-    const deployment = await ExamDeployment.findById(req.params.id);
+    const deployment = await ExamDeployment.findById(req.params.id).populate('quiz');
     if (!deployment) return res.status(404).json({ message: 'Not found' });
+    if (req.user.role !== 'admin' && deployment.quiz?.examiner?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
     
     // We optionally delete the quiz here if it's uniquely bound, but to allow reuse we can just delete deployment
     // Or actually since UI currently combines them, if an examiner deletes "quiz", it should delete both

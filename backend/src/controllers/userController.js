@@ -1,5 +1,5 @@
 import User from '../models/User.js';
-import Attempt from '../models/Attempt.js';
+import ExamSession from '../models/ExamSession.js';
 import bcrypt from 'bcryptjs';
 
 export const updateProfile = async (req, res) => {
@@ -79,20 +79,32 @@ export const toggleBlockUser = async (req, res) => {
 
 export const getGlobalPerformance = async (req, res) => {
   try {
-    const attempts = await Attempt.find({ status: 'completed' })
+    const sessions = await ExamSession.find({ status: { $in: ['submitted', 'auto_submitted'] } })
       .populate({
         path: 'candidate',
         select: 'name email universityCampus branch semester section course',
         populate: { path: 'course', select: 'name' }
       })
       .populate({
-        path: 'quiz',
-        select: 'title totalMarks course universityCampus branch semester section',
-        populate: { path: 'course', select: 'name' }
-      });
+        path: 'examDeployment',
+        populate: { path: 'quiz', select: 'title totalMarks course', populate: { path: 'course', select: 'name' } }
+      })
+      .sort({ endTime: -1 });
+
+    const attempts = sessions
+      .filter((session) => session.candidate && session.examDeployment?.quiz)
+      .map((session) => ({
+        ...session.toObject(),
+        status: 'completed',
+        deploymentId: session.examDeployment._id,
+        quizId: session.examDeployment.quiz._id,
+        quiz: session.examDeployment.quiz
+      }));
+
     res.json(attempts);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Global performance error:', error);
+    res.status(500).json({ message: 'Unable to load global performance data' });
   }
 };
 

@@ -16,7 +16,7 @@ import Navbar from '../components/layout/Navbar';
 const COLORS = ['#4F46E5', '#EF4444', '#F59E0B', '#06B6D4'];
 
 const CandidateDashboard = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -93,9 +93,9 @@ const CandidateDashboard = () => {
     }
   };
 
-  const handleStartQuiz = async (quizId) => {
+  const handleStartQuiz = async (deploymentId) => {
     try {
-      const { data } = await axios.post('/api/attempts', { quizId });
+      const { data } = await axios.post('/api/attempts', { deploymentId });
       navigate(`/attempt/${data._id}`);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to initialize testing environment');
@@ -111,10 +111,6 @@ const CandidateDashboard = () => {
     }, 4000);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const submitFeedback = async (e) => {
     e.preventDefault();
@@ -326,14 +322,6 @@ const CandidateDashboard = () => {
 
                     const diffSeconds = startTime ? Math.floor((startTime - currentTime) / 1000) : 0;
                     
-                    const formatCountdown = (secs) => {
-                      if(secs <= 0) return '00:00:00';
-                      const h = Math.floor(secs / 3600).toString().padStart(2, '0');
-                      const m = Math.floor((secs % 3600) / 60).toString().padStart(2, '0');
-                      const s = (secs % 60).toString().padStart(2, '0');
-                      return `${h}:${m}:${s}`;
-                    };
-
                     const isPrepared = preparingEnvironments[quiz._id] === 'ready';
                     const isPreparing = preparingEnvironments[quiz._id] === 'preparing';
 
@@ -379,14 +367,14 @@ const CandidateDashboard = () => {
                           </button>
                         ) : isLive && !isCompleted ? (
                           <button 
-                            onClick={() => handleStartQuiz(quiz._id)}
+                            onClick={() => handleStartQuiz(quiz.deploymentId || quiz._id)}
                             className="w-full py-3 rounded-xl font-bold flex items-center justify-center transition-all shadow-md bg-gradient-to-r from-red-600 to-red-500 text-white hover:shadow-red-500/30 active:scale-[0.98]"
                           >
                             Enter Live Exam <Play size={16} className="ml-2"/>
                           </button>
                         ) : isEnvReady ? (
                           <button 
-                            onClick={() => handlePrepareEnvironment(quiz._id)}
+                            onClick={() => handlePrepareEnvironment(quiz.deploymentId || quiz._id)}
                             disabled={isPrepared || isPreparing}
                             className={`w-full py-3 rounded-xl font-bold flex items-center justify-center transition-all shadow-md ${
                               isPrepared ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :

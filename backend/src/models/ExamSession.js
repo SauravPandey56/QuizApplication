@@ -7,7 +7,8 @@ const responseSchema = new mongoose.Schema({
     required: true
   },
   selectedOption: {
-    type: Number
+    type: String,
+    default: ''
   },
   isCorrect: {
     type: Boolean

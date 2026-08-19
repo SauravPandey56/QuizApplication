@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { 
   LayoutDashboard, BookOpen, Layers, Activity, User, Settings, 
@@ -15,8 +14,7 @@ import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 
 const ExaminerDashboard = () => {
-  const { user, logout } = useContext(AuthContext);
-  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   const [activeTab, setActiveTab] = useState('dashboard');
   
@@ -53,6 +51,8 @@ const ExaminerDashboard = () => {
     fetchQuizzes();
     fetchCourses();
     fetchSettings();
+    // These bootstrap loaders intentionally run once when the workspace mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -89,10 +89,6 @@ const ExaminerDashboard = () => {
   const defaultBranches = ['CSE', 'mechanical', 'civil', 'electrical', 'ECE', 'chemical'];
   const defaultSections = ['A', 'B', 'C', 'D'];
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const submitForReview = async (quizId) => {
     if(!window.confirm("Submit this quiz for admin approval?")) return;

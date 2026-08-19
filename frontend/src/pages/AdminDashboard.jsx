@@ -14,11 +14,9 @@ import { AuthContext } from '../context/AuthContext';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
-import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
-  const { user, logout } = useContext(AuthContext);
-  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   const [activeTab, setActiveTab] = useState('dashboard');
   
@@ -69,10 +67,6 @@ const AdminDashboard = () => {
     axios.get('/api/feedback').then(res => setFeedbacks(res.data)).catch(console.error);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   // ACTIONS
   const handleCreateCourse = async (e) => {
@@ -164,7 +158,7 @@ const AdminDashboard = () => {
       setExtendQuizId(null);
       setBroadcastMessage('');
       alert(`Emergency Action: ${action} executed.`);
-    } catch (e) {
+    } catch {
       alert(`Failed to execute ${action}`);
     }
   };
@@ -185,10 +179,6 @@ const AdminDashboard = () => {
     return last10.map((p, i) => ({ name: `Attempt ${i + 1}`, score: p.score || 0 }));
   };
 
-  const getBarData = () => {
-    if (!quizzes || quizzes.length === 0) return [];
-    return quizzes.slice(0, 5).map(q => ({ name: q.title.substring(0, 10), attempts: Math.floor(Math.random() * 20) + 1 }));
-  };
 
   const getPieData = () => {
     if (!courses || courses.length === 0) return [{ name: 'Empty', value: 1 }];

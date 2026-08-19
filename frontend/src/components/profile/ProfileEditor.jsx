@@ -39,7 +39,7 @@ const ProfileEditor = () => {
       const payload = { ...formData };
       if(!payload.password) delete payload.password;
       
-      const res = await axios.put('/api/users/profile', payload);
+      await axios.put('/api/users/profile', payload);
       // Update local storage token if user data implies token generation occurred, but our PUT route only sends user details.
       // We will reload to populate AuthContext naturally.
       setMessage({ type: 'success', text: 'Profile & Credentials updated successfully!' });

@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import QuizSphereLogo from '../components/logo/QuizSphereLogo';
 import { 
@@ -18,7 +19,7 @@ const Landing = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isFocused, setIsFocused] = useState('');
+  const [, setIsFocused] = useState('');
 
   // Feedback form state
   const [feedbackData, setFeedbackData] = useState({ name: '', email: '', subject: '', message: '' });
@@ -33,20 +34,9 @@ const Landing = () => {
     e.preventDefault();
     setFeedbackLoading(true);
     try {
-      // Using explicit absolute URL and correct singular endpoint
-      const response = await fetch('http://localhost:5000/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(feedbackData)
-      });
-      
-      if (response.ok) {
-        setFeedbackSuccess(true);
-        setFeedbackData({ name: '', email: '', subject: '', message: '' });
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Server responded with status: ${response.status}`);
-      }
+      await axios.post('/api/feedback', feedbackData);
+      setFeedbackSuccess(true);
+      setFeedbackData({ name: '', email: '', subject: '', message: '' });
     } catch (err) {
       console.error('FULL ERROR:', err);
       alert(err.message || 'Failed to submit feedback');

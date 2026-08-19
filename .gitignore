@@ -1,0 +1,27 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+dist/
+build/
+
+# Logs and local tooling
+*.log
+.DS_Store
+
+# IDE files
+.vscode/
+.idea/
+
+# Local test coverage
+coverage/
+
+# Backend local runtime files
+backend/uploads/
+frontend/.vite/
+
+# Keep package lockfiles tracked
+!package-lock.json
