@@ -19,6 +19,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const [focusedField, setFocusedField] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [conformPassword, setConformPassword] = useState('')
 
   const { register } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ const Register = () => {
           setFormData(prev => ({ ...prev, course: coursesRes.data[0]._id }));
         }
         setSettings(settingsRes.data);
-      } catch {
+      } catch (err) {
         console.error('Data fetch failed');
       }
     };
@@ -68,19 +69,29 @@ const Register = () => {
   const validateStep1 = () => {
     setError('');
     if (!formData.name || !formData.email || !formData.password) {
-      setError('System requires all basic vectors attached.'); return false;
+      setError('All field are required'); return false;
     }
     return true;
   };
 
   const handleNextStep = () => {
-    if (step === 1 && validateStep1()) {
-      if (formData.role === 'examiner') setStep(3); // Skip academic setup
-      else setStep(2);
-    } else if (step === 2) {
-      setStep(3);
+  if (step === 1 && validateStep1()) {
+    if (formData.role === 'examiner') setStep(3); // Skip academic setup
+    else setStep(2);
+  } else if (step === 2) {
+    // Extract step 2 fields
+    const { course, universityCampus, branch, semester, section } = formData;
+
+    // Validate that none of the step 2 fields are empty
+    if (!course || !universityCampus || !branch || !semester || !section) {
+      setError('Please Enter Acedamic details'); 
+      return; // Stop execution and stay on step 2
     }
-  };
+
+    setStep(3);
+  }
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -127,14 +138,13 @@ const Register = () => {
                <p className="text-slate-400 text-sm font-medium">Join the intelligent evaluation platform.</p>
              </div>
 
-             {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm font-bold flex items-center justify-center animate-pulse">{error}</div>}
 
              <form onSubmit={handleSubmit} className="relative z-10">
                
                {/* STEP 1: BASIC INFO */}
                {step === 1 && (
                  <div className="space-y-5 animate-slide-right">
-                    
+                    {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm font-bold flex items-center justify-center animate-pulse">{error}</div>}
                     {/* Role Selection */}
                     <div className="grid grid-cols-2 gap-4 mb-6">
                        <label className={`cursor-pointer rounded-2xl p-4 border transition-all duration-300 transform hover:-translate-y-1 ${formData.role === 'candidate' ? 'bg-indigo-600/10 border-indigo-500/50 shadow-[0_0_20px_rgba(79,70,229,0.1)]' : 'bg-[#1A1A1E] border-white/5 hover:border-white/20'}`}>
@@ -143,6 +153,8 @@ const Register = () => {
                          <p className={`font-bold text-sm ${formData.role === 'candidate' ? 'text-white' : 'text-slate-400'}`}>Candidate</p>
                          <p className="text-[10px] text-slate-500 mt-1 leading-tight">Execute modules & track rank.</p>
                        </label>
+
+
                        <label className={`cursor-pointer rounded-2xl p-4 border transition-all duration-300 transform hover:-translate-y-1 ${formData.role === 'examiner' ? 'bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.1)]' : 'bg-[#1A1A1E] border-white/5 hover:border-white/20'}`}>
                          <input type="radio" name="role" value="examiner" checked={formData.role === 'examiner'} onChange={handleChange} className="hidden" />
                          <UserCircle size={24} className={`mb-3 ${formData.role === 'examiner' ? 'text-cyan-400' : 'text-slate-500'}`} />
@@ -151,11 +163,14 @@ const Register = () => {
                        </label>
                     </div>
 
-                    <InputField icon={<User size={18}/>} type="text" name="name" label="Full Legal Name" value={formData.name} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
-                    <InputField icon={<Mail size={18}/>} type="email" name="email" label="Institutional Email" value={formData.email} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
+                    <InputField icon={<User size={18}/>} type="text" name="name" label="Full name" value={formData.name} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
+                    <InputField icon={<Mail size={18}/>} type="email" name="email" label="Email" value={formData.email} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
                     
                     <div className="relative">
-                      <InputField icon={<Lock size={18}/>} type="password" name="password" label="Cryptographic Signature" value={formData.password} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
+                      <InputField icon={<Lock size={18}/>} type="password" name="password" label="Password" value={formData.password} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
+
+                      <InputField icon={<Lock size={18}/>} type="password" name="password" label="Confirm password" value={conformPassword} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
+
                       <div className="flex h-1 mt-2 space-x-1 w-full rounded-full overflow-hidden bg-[#1A1A1E]">
                         <div className={`h-full transition-all duration-500 ${passwordStrength > 0 ? (passwordStrength > 50 ? 'bg-cyan-500' : 'bg-red-500') : 'bg-transparent'} w-1/4`}></div>
                         <div className={`h-full transition-all duration-500 ${passwordStrength > 25 ? (passwordStrength > 50 ? 'bg-cyan-500' : 'bg-amber-500') : 'bg-transparent'} w-1/4`}></div>
@@ -170,23 +185,30 @@ const Register = () => {
                  </div>
                )}
 
+
                {/* STEP 2: ACADEMIC INFO */}
                {step === 2 && (
-                 <div className="space-y-4 animate-slide-left">
-                    <SelectField label="Enrolled Course" name="course" value={formData.course} onChange={handleChange} options={courses.map(c => ({val: c._id, tag: c.name}))} />
-                    <SelectField label="Campus" name="universityCampus" value={formData.universityCampus} onChange={handleChange} options={getOptions(campuses, defaultCampuses).map(c => ({val: c, tag: c}))} />
+                <div className="space-y-4 animate-slide-left">
+                    {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm font-bold flex items-center justify-center animate-pulse">{error}</div>}
+
+                    <SelectField label="Enrolled Course" name="course" value={formData.course} required onChange={handleChange} options={courses.map(c => ({val: c._id, tag: c.name}))} />
+
+                    <SelectField label="Campus" name="universityCampus" value={formData.universityCampus} required onChange={handleChange} options={getOptions(campuses, defaultCampuses).map(c => ({val: c, tag: c}))} />
+
                     <div className="grid grid-cols-2 gap-4">
-                      <SelectField label="Branch" name="branch" value={formData.branch} onChange={handleChange} options={getOptions(branches, defaultBranches).map(b => ({val: b, tag: b}))} />
-                      <SelectField label="Semester" name="semester" value={formData.semester} onChange={handleChange} options={[1,2,3,4,5,6,7,8].map(s => ({val: s, tag: `Sem ${s}`}))} />
+                      <SelectField label="Branch" name="branch" value={formData.branch} required onChange={handleChange} options={getOptions(branches, defaultBranches).map(b => ({val: b, tag: b}))} />
+                      <SelectField label="Semester" name="semester" value={formData.semester} required onChange={handleChange} options={[1,2,3,4,5,6,7,8].map(s => ({val: s, tag: `Sem ${s}`}))} />
                     </div>
-                    <SelectField label="Section" name="section" value={formData.section} onChange={handleChange} options={getOptions(sections, defaultSections).map(s => ({val: s, tag: `Sec ${s}`}))} />
+
+                    <SelectField label="Section" name="section" value={formData.section} required onChange={handleChange} options={getOptions(sections, defaultSections).map(s => ({val: s, tag: `Sec ${s}`}))} />
 
                     <div className="flex space-x-3 pt-4">
                       <button type="button" onClick={() => setStep(1)} className="flex-1 bg-transparent border border-white/10 text-white hover:bg-white/5 font-bold py-4 rounded-xl transition-all">Back</button>
                       <button type="button" onClick={handleNextStep} className="flex-[2] bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold py-4 rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all transform hover:scale-[1.02] active:scale-[0.98]">Confirm Matrix</button>
                     </div>
-                 </div>
-               )}
+                </div>
+              )}              
+
 
                {/* STEP 3: PROFILE SETUP */}
                {step === 3 && (
@@ -212,7 +234,7 @@ const Register = () => {
 
            </div>
            <p className="mt-8 text-center text-sm font-medium text-slate-500">
-             Already mapped? <span onClick={() => navigate('/login')} className="text-white hover:text-indigo-400 cursor-pointer transition-colors border-b border-transparent hover:border-indigo-400 pb-0.5 ml-1">Authenticate here</span>
+             Already Registered? <span onClick={() => navigate('/login')} className="text-white hover:text-indigo-400 cursor-pointer transition-colors border-b border-transparent hover:border-indigo-400 pb-0.5 ml-1">Login</span>
            </p>
         </div>
       </div>
